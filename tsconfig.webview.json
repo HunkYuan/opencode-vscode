@@ -1,0 +1,36 @@
+{
+  "compilerOptions": {
+    "target": "ESNext",
+    "module": "ESNext",
+    "moduleResolution": "bundler",
+    "jsx": "preserve",
+    "jsxImportSource": "solid-js",
+    "strict": true,
+    "skipLibCheck": true,
+    "noEmit": true,
+    "types": [
+      "vite/client",
+      "node"
+    ],
+    "lib": [
+      "ESNext",
+      "DOM",
+      "DOM.Iterable"
+    ],
+    "allowImportingTsExtensions": true,
+    "allowJs": true,
+    "paths": {
+      "@/*": [
+        "./.upstream/packages/app/src/*"
+      ]
+    }
+  },
+  "include": [
+    "webview",
+    "src/protocol.ts"
+  ],
+  "exclude": [
+    "node_modules",
+    "dist"
+  ]
+}

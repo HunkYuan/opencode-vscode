@@ -1,0 +1,19 @@
+{
+  "repository": "https://github.com/anomalyco/opencode",
+  "commit": "c93aaae37157d785f76a8e9a9243a6560e286468",
+  "version": "2.1.2",
+  "packages": [
+    "@opencode/ai",
+    "@opencode/app",
+    "@opencode/client",
+    "@opencode/gui-extensions",
+    "@opencode/plugin",
+    "@opencode/plugin-browser",
+    "@opencode/protocol",
+    "@opencode/schema",
+    "@opencode/session-ui",
+    "@opencode/theme",
+    "@opencode/ui",
+    "@opencode/util"
+  ]
+}

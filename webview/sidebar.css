@@ -1,0 +1,36 @@
+html, body, #root {
+  width: 100%;
+  height: 100%;
+  margin: 0;
+  overflow: hidden;
+}
+body { padding: 0; }
+#root { display: flex; flex-direction: column; }
+#root > [data-component] { min-height: 0; }
+.connection-screen {
+  padding: 20px;
+  color: var(--vscode-foreground);
+  background: var(--vscode-sideBar-background);
+  font: 13px/20px var(--vscode-font-family, sans-serif);
+}
+.connection-screen h2 { font-size: 16px; }
+.connection-screen button {
+  display: block;
+  margin: 12px 0;
+  padding: 6px 12px;
+  border: 1px solid var(--vscode-button-border, transparent);
+  color: var(--vscode-button-foreground);
+  background: var(--vscode-button-background);
+  border-radius: 4px;
+  cursor: pointer;
+}
+.version-notice {
+  flex: none;
+  padding: 4px 10px;
+  font: 11px/16px var(--vscode-font-family, sans-serif);
+  color: var(--vscode-descriptionForeground);
+  background: var(--vscode-sideBar-background);
+}
+
+#root { position: relative; }
+.connection-overlay { position: absolute; inset: 0; z-index: 10000; background: var(--vscode-sideBar-background); }

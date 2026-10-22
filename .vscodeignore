@@ -1,0 +1,8 @@
+**
+!package.json
+!README.md
+!LICENSE
+!THIRD_PARTY_NOTICES.md
+!media/**
+!dist/**
+!docs/images/**

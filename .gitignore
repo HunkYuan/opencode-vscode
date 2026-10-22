@@ -1,0 +1,25 @@
+node_modules/
+.upstream/
+dist/
+artifacts/
+*.vsix
+*.tsbuildinfo
+*.log
+.write-check
+
+# Local migration and diagnostic scripts are retained on disk.
+scripts/adjust.ts
+scripts/cleanup-prep.ts
+scripts/cli-smoke.ts
+scripts/complete-adapters.ts
+scripts/delivery-record.ts
+scripts/dependency-probe.mjs
+scripts/download-portable.mjs
+scripts/finalize.ts
+scripts/font.ts
+scripts/lifecycle.ts
+scripts/refine.ts
+scripts/release-refine.ts
+scripts/resume-portable.mjs
+scripts/session-test-adjust.ts
+scripts/sprite-apply.ts

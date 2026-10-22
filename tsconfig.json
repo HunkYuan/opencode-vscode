@@ -1,0 +1,31 @@
+{
+  "compilerOptions": {
+    "target": "ES2022",
+    "module": "ESNext",
+    "moduleResolution": "bundler",
+    "strict": true,
+    "skipLibCheck": true,
+    "noEmit": true,
+    "types": [
+      "node",
+      "bun",
+      "vscode"
+    ],
+    "lib": [
+      "ES2022",
+      "DOM"
+    ],
+    "allowImportingTsExtensions": true,
+    "allowJs": true
+  },
+  "include": [
+    "src",
+    "scripts",
+    "test"
+  ],
+  "exclude": [
+    "node_modules",
+    ".upstream",
+    "dist"
+  ]
+}

@@ -1,0 +1,14 @@
+* text=auto
+*.ts text eol=lf
+*.tsx text eol=lf
+*.mjs text eol=lf
+*.json text eol=lf
+*.md text eol=lf
+*.yml text eol=lf
+*.yaml text eol=lf
+*.svg text eol=lf
+*.woff2 binary
+*.png binary
+*.vsix binary
+bun.lock text eol=lf
+resources/fonts/IBM-Plex-LICENSE.txt whitespace=-blank-at-eol
