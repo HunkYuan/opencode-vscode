@@ -60,3 +60,12 @@
 - SHA256：88612da7fa4ec7d84f2a3597b7b55534f051ae77981da1351e9748752eb2867c。
 
 - ATTACH-001 仓库同步：用户授权更新 GitHub dev；本次提交包含附件适配、回归测试、0.1.1 版本与验证文档。GitHub CI 验证 Windows/Linux 的检查、单测和 VSIX 构建。
+
+## ATTACH-001 — v0.1.1 GitHub Release 发布 — 2026-10-22
+
+- 用户明确授权发布 0.1.1 安装包到 GitHub Release。
+- [v0.1.1 Release](https://github.com/HunkYuan/opencode-vscode/releases/tag/v0.1.1) 已公开，标签指向附件修复提交 6ca6c8405b35864dc7c97f36eeca802f466df4a3。
+- 对应 [Windows/Linux CI](https://github.com/HunkYuan/opencode-vscode/actions/runs/39773765818) 均通过检查、单测和 VSIX 构建。
+- 已上传 opencode-sidebar-0.1.1.vsix 与 SHA256SUMS.txt，发布说明保存于 docs/releases/v0.1.1.md。
+- 不带凭据从公开下载地址重新读取两个附件，安装包 33,351,040 bytes；SHA256 88612da7fa4ec7d84f2a3597b7b55534f051ae77981da1351e9748752eb2867c，与公开校验文件一致。
+- GitHub 标签与源码提交已核对；日常项目自测与验收仍由用户完成。

@@ -45,3 +45,10 @@ UI 使用完整官方组件与状态同步。编译时针对 VS Code 的限制�
 发送以添加时的编辑器快照为准；修改后可重新添加更新快照。fixture 只连接本地模型接口，并使用独立 service、XDG 配置和端口。
 
 最终 check 通过，10 项单测通过；原选区／重载联调通过。0.1.1 VSIX 共 33,351,040 bytes，隔离 profile 安装成功；清单中没有 scripts、test、artifacts 或 .upstream。SHA256：88612da7fa4ec7d84f2a3597b7b55534f051ae77981da1351e9748752eb2867c。
+
+## 0.1.1 公开发布验证
+
+- [GitHub Release](https://github.com/HunkYuan/opencode-vscode/releases/tag/v0.1.1) 已公开，标签指向 6ca6c8405b35864dc7c97f36eeca802f466df4a3。
+- 源码提交的 [Windows/Linux CI](https://github.com/HunkYuan/opencode-vscode/actions/runs/39773765818) 成功。
+- 已通过公开地址重新下载 [VSIX](https://github.com/HunkYuan/opencode-vscode/releases/download/v0.1.1/opencode-sidebar-0.1.1.vsix) 和 [SHA256SUMS.txt](https://github.com/HunkYuan/opencode-vscode/releases/download/v0.1.1/SHA256SUMS.txt)；安装包 33,351,040 bytes，SHA256 与本机已验证安装包和校验附件一致。
+- 发布说明见 [v0.1.1](releases/v0.1.1.md)。

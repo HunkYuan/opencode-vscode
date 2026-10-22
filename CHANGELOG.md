@@ -7,7 +7,7 @@
 - test(editor): verify actual UI sends, restored drafts, service attachment MIME and model input with an isolated local provider.
 - test(vscode): verify real VS Code GBK decoding, Add Current File and Send without changing source bytes.
 
-0.1.1 本地自测包，待用户在日常项目验收。
+0.1.1 已发布到 [GitHub Release](https://github.com/HunkYuan/opencode-vscode/releases/tag/v0.1.1)，日常项目仍需用户自测。
 
 ## 0.1.0 — 2026-10-22
 
