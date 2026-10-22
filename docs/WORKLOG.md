@@ -43,3 +43,20 @@
 - 从公开下载地址重新读取安装包，33,350,629 bytes；SHA256 efe21fabae8c51d30e04e55c674b6b2be2ec93aba6da6e086d1df1959ac72f13，与校验附件一致。
 - 固定公开来源的 Release 构建在隔离真实 VS Code 中完成侧栏、共享服务连接与当前文件附件验证。
 - 后续通过 GitHub Issues 收集日常项目使用反馈；Linux/macOS 实际编辑器使用仍待手动验证。
+
+## ATTACH-001 — 修复当前文件附件在模型输入中丢失 — 2026-10-22
+
+- 用户反馈 Add Current File 显示文件卡片，但模型没有收到文件；修复方案经用户确认后开工。
+- 读取真实会话确认附件已到 service；6301 字节与磁盘一致，但 GBK 源码被识别为 application/octet-stream，模型输入转换忽略该 MIME。
+- 插件发送 VS Code 已解码的 UTF-8 编辑器快照，复用官方通用附件与 Blob 存储；路径、选区、保存状态位于模型可读文本中。
+- 同文件同选区再次添加会替换旧快照；添加后编辑须再次添加以更新捕获内容。
+- 新增独立 service / 本地模型 fixture，验证六类实际 UI 发送与草稿重载；旧版 0.1.0 产物在新回归断言处失败，新版通过。
+- 真实 VS Code 1.94 通过 GBK 解码、Add Current File、点击发送、service text/plain 与模型输入核对；GBK 文件字节未变。
+- 更新版本为 0.1.1；插件实现和测试均在 E:/opencode-vscode，官方来源和 SDK 生成文件未改。
+- 本次验证使用 artifacts 下隔离 XDG 配置和独立端口，未停止或重启用户已有 service。日常项目验收待用户完成。
+
+- 最终验证：bun run check 通过；bun test ./test 为 10 pass / 0 fail；新回归六类发送通过，原 interaction-smoke 的选区与重载恢复通过。
+- 0.1.1 VSIX 已生成并安装到隔离 profile；33,351,040 bytes，2816 个 ZIP entries，无测试、fixture、依赖和源码快照目录。
+- SHA256：88612da7fa4ec7d84f2a3597b7b55534f051ae77981da1351e9748752eb2867c。
+
+- ATTACH-001 仓库同步：用户授权更新 GitHub dev；本次提交包含附件适配、回归测试、0.1.1 版本与验证文档。GitHub CI 验证 Windows/Linux 的检查、单测和 VSIX 构建。

@@ -10,7 +10,7 @@
 
 要求：VS Code 1.94+、本机已安装 [OpenCode CLI](https://opencode.ai)。当前内置 UI 固定在 OpenCode 2.1.2。
 
-1. 从 [GitHub Releases](https://github.com/HunkYuan/opencode-vscode/releases/latest) 下载 `opencode-sidebar-0.1.0.vsix`。
+1. 从 [GitHub Releases](https://github.com/HunkYuan/opencode-vscode/releases/latest) 下载对应版本的 `.vsix`。
 2. 在 VS Code 扩展菜单选择 **Install from VSIX…** 安装。
 3. 打开本地项目，执行 **OpenCode: Open Sidebar**，或按 `Ctrl+Alt+O`（macOS：`Cmd+Alt+O`）。
 4. 选中代码，右键 **OpenCode: Add Selection** 或按 `Ctrl+Alt+K`，确认附件后输入需求。
@@ -22,12 +22,14 @@
 |---|---|
 | OpenCode: Open Sidebar | 打开官方 UI 侧栏 |
 | OpenCode: New Session | 在当前工作区新建会话 |
-| OpenCode: Add Current File | 添加当前文件 |
-| OpenCode: Add Selection | 添加选区；未保存内容随上下文发送 |
+| OpenCode: Add Current File | 添加当前编辑器的文本快照，包含完整文件路径 |
+| OpenCode: Add Selection | 添加精确选区和范围，支持未保存内容 |
 | OpenCode: Review Changes | 在原生 diff 中查看本轮改动 |
 | OpenCode: Reconnect | 重新发现并连接 service |
 | OpenCode: Enable Shared Service | 用户主动启用被禁用的 service |
 | OpenCode: Show Logs | 查看插件日志 |
+
+文件和选区在添加时捕获编辑器文本，通过官方 Blob 附件发送 UTF-8 快照。VS Code 正确解码的 GBK 等源码可正常发送，磁盘文件保持原编码；添加后继续编辑时，再执行一次添加命令更新快照。
 
 工具按 OpenCode 的权限规则执行并直接修改磁盘，diff 用于修改后的审阅。首版没有单文件撤回按钮。
 
@@ -103,9 +105,13 @@ Linux、macOS 的实际编辑器使用尚未手动验证。首版面向本机工
 ```sh
 bun run test:service
 bun run test:ui
+bun run test:attachments
+bun run test:vscode /path/to/Code.exe
 ```
 
-`test:ui` 在 Windows 默认使用 Edge，其他平台需先安装 Playwright Chromium。可以通过 `OPENCODE_TEST_BROWSER` 指定浏览器可执行文件。真 service 测试复用已有服务，fixture 测试使用隔离配置和独立端口。
+`test:attachments` 使用独立 service 和本地模型接口，核对请求、服务端附件以及模型收到的文本；覆盖 GBK、UTF-8、未保存内容、选区、空文件和草稿重载。`test:vscode` 额外验证真实编辑器的 GBK 解码与文件命令，需要指定 VS Code 可执行文件。
+
+`test:ui` 和 `test:attachments` 在 Windows 默认使用 Edge，其他平台需先安装 Playwright Chromium。可以通过 `OPENCODE_TEST_BROWSER` 指定浏览器可执行文件。真 service 测试复用已有服务，fixture 测试使用隔离配置和独立端口。
 
 ## 许可与记录
 

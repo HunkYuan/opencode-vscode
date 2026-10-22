@@ -2,7 +2,7 @@
   "name": "opencode-sidebar",
   "displayName": "OpenCode Sidebar",
   "description": "Community VS Code extension embedding the OpenCode UI and connecting to your shared local service.",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "publisher": "opencode-local",
   "private": true,
   "type": "module",
@@ -228,7 +228,9 @@
     "package": "vsce package --no-dependencies",
     "vscode:prepublish": "bun run build",
     "test:ui": "bun scripts/browser-smoke.ts && bun scripts/interaction-smoke.ts && bun scripts/session-smoke.ts",
-    "test:service": "bun scripts/service-smoke.ts"
+    "test:service": "bun scripts/service-smoke.ts",
+    "test:attachments": "bun scripts/attachment-smoke.ts",
+    "test:vscode": "bun scripts/vscode-smoke.ts"
   },
   "devDependencies": {
     "@opencode/app": "workspace:*",
