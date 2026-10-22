@@ -24,3 +24,5 @@ UI 使用完整官方组件与状态同步。编译时针对 VS Code 的限制�
 ## GitHub 发布构建
 
 仅复制公开文件的新目录已通过 bun run setup、bun install --frozen-lockfile、bun run check、bun test test 和 bun run package。Windows 下官方符号链接转为普通文件，package.json 与 bun.lock 字节一致；产物约 31.81 MB。
+
+[GitHub CI](https://github.com/HunkYuan/opencode-vscode/actions/runs/39752056499) 的 Ubuntu 与 Windows job 均成功。公开 [v0.1.0 Release](https://github.com/HunkYuan/opencode-vscode/releases/tag/v0.1.0) 的 VSIX 重新下载后与 SHA256SUMS.txt 一致（33,350,629 bytes）。

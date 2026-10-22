@@ -33,3 +33,13 @@
 - 新增 Windows/Linux CI：固定来源准备、frozen-lockfile 安装、check、test、VSIX 构建。
 - 在只含待公开文件的新目录从零完成 setup、安装、检查、测试、打包；清单和锁文件未改变。
 - 初始 Release 包约 31.81 MB；已验证范围和安装步骤写入 docs/releases/v0.1.0.md。
+
+## GitHub 发布完成 — 2026-10-22
+
+- 公开仓库：[HunkYuan/opencode-vscode](https://github.com/HunkYuan/opencode-vscode)，默认分支 dev。
+- 初始源码提交：05bf5c8，feat(vscode): embed official OpenCode UI。
+- [Windows/Linux CI](https://github.com/HunkYuan/opencode-vscode/actions/runs/39752056499) 均通过：固定来源、锁定安装、lint/typecheck、测试、VSIX 构建。
+- [v0.1.0 Release](https://github.com/HunkYuan/opencode-vscode/releases/tag/v0.1.0) 已公开，附 opencode-sidebar-0.1.0.vsix 与 SHA256SUMS.txt。
+- 从公开下载地址重新读取安装包，33,350,629 bytes；SHA256 efe21fabae8c51d30e04e55c674b6b2be2ec93aba6da6e086d1df1959ac72f13，与校验附件一致。
+- 固定公开来源的 Release 构建在隔离真实 VS Code 中完成侧栏、共享服务连接与当前文件附件验证。
+- 后续通过 GitHub Issues 收集日常项目使用反馈；Linux/macOS 实际编辑器使用仍待手动验证。
