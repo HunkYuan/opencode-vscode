@@ -14,6 +14,20 @@
       "sha256": "a65fbb7e0afb54c37de2063960c906f74b095faa34a6bda0185f95b36e99f5fd",
       "size": 33674162,
       "sourceCommit": "0cc5a377c4f79b79c6cbffefa04e4f09887af562"
+    },
+    {
+      "schemaVersion": 1,
+      "id": "opencode-2.1.2-vscode.1",
+      "revision": 1,
+      "upstreamVersion": "2.1.2",
+      "upstreamCommit": "c93aaae37157d785f76a8e9a9243a6560e286468",
+      "hostProtocol": 1,
+      "serviceRange": "2.1.2",
+      "entry": "index.html",
+      "url": "https://github.com/HunkYuan/opencode-vscode/releases/download/ui-2.1.2-vscode.1/opencode-ui-2.1.2-vscode.1.zip",
+      "sha256": "8d3a8f747f3cc06125c3dd19f655e31d0e38abe47a1fbb63b020f3b63bcb5890",
+      "size": 33670451,
+      "sourceCommit": "48eba95fdc0b33513c6f01ce85222d5355bff5a2"
     }
   ]
 }
