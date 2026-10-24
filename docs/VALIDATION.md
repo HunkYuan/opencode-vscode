@@ -108,5 +108,21 @@ GitHub 自动监测和公开发布将在服务器端验证后记录。日常项�
 | 真实 VS Code 1.94 Import UI Package | 通过 | artifacts/vscode-smoke.json |
 | 文件定位／原生 diff／未保存选区 | 通过 | artifacts/vscode-smoke.json |
 | 本地包应用和回退后再次发送，草稿保留 | 通过 | artifacts/vscode-smoke.json |
+| 0.3.0 VSIX 文件范围、版本、许可证及 SHA256 | 通过 | artifacts/package-0.3.0.json |
+| 实际 VSIX 隔离安装及同组编辑器／UI 命令验证 | 通过，真实 VS Code 1.94 | artifacts/installed-vscode-smoke.json |
+| 远端 Actions 停用、附件／artifact／cache 清空 | 回查通过 | artifacts/publish/source-only-after.json |
 
 全部验证在本机进行，没有启用 GitHub Actions 或上传新产物。用户 service 保持运行；日常项目验收仍需用户自测。
+
+### 0.3.0 本地产物与安装记录
+
+构建源码提交：`57e108e090fdc841b9d49fde9401e2f323a5ea8b`。后续验证文档提交不改变 Host/UI 实现。OpenCode 来源为 2.1.4、`68bc26b7da1990ce10ffecfbc1e09eb13aa5d824`，内置 UI ID 为 `opencode-2.1.4-vscode.3`。
+
+| 本地产物 | 字节 | SHA256 |
+|---|---:|---|
+| `opencode-sidebar-0.3.0.vsix` | 34,457,806 | `c44e1dcf9056aec4276341b610ea643403c6659ddd7765442530a24338ea6ef3` |
+| `artifacts/ui/opencode-ui-2.1.4-vscode.3.zip` | 33,796,029 | `64316dbe3dc9b1bb5687b703742b5192741e6a6c23ae3de38b8e54fef09d81ef` |
+
+VSIX 共 3,648 个 entries，包含 Host、Webview 和许可证，没有 scripts、test、artifacts、.upstream、node_modules 或 .github 目录。安装到 artifacts 下的独立 profile 后，实际插件命令验证 GBK 文件与未保存选区发送、文件跳转、原生 diff、导入／应用／回退及草稿恢复；service 和本地模型接口收到 text/plain 快照，GBK 源文件字节未变。导入测试包修订 4 后回退到内置修订 3。
+
+构建日志保存于 `artifacts/package-0.3.0.log`，安装验证日志保存于 `artifacts/installed-vscode-0.3.0.log`。以上产物与测试目录均被 Git 忽略，没有发布到 GitHub；用户日常配置未安装。2026-10-24 的远端回查确认 Actions enabled=false，五个历史 Release 附件数为零，artifact／cache 库存为零。

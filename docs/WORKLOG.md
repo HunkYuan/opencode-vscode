@@ -138,3 +138,12 @@
 - 本地准备 2.1.4、构建 Host/UI、check、14 项单测通过；浏览器本地导入／重载／GBK 发送／diff／回退，以及真实 VS Code 命令和应用后再次发送通过。
 - 六类编辑器附件、Markdown／权限／表单联调通过，均使用隔离 service；未替换或停止用户已有 service。
 - 更新 README、SOURCE-ONLY、Changelog 和历史文档状态；保留所有源码标签和提交历史。下一步本地 VSIX 打包与安装自测。
+
+## SOURCE-001 — 0.3.0 本地打包与安装验证 — 2026-10-24
+
+- 最终审查通过；实现提交 57e108e090fdc841b9d49fde9401e2f323a5ea8b，构建范围仅 E:/opencode-vscode。
+- bun run package 成功，0.3.0 VSIX 为 34,457,806 bytes／3,648 entries；Host、内置 UI 与许可证完整，无源码快照、测试或 artifact 目录。
+- VSIX SHA256 c44e1dcf9056aec4276341b610ea643403c6659ddd7765442530a24338ea6ef3；UI ZIP 33,796,029 bytes，SHA256 64316dbe3dc9b1bb5687b703742b5192741e6a6c23ae3de38b8e54fef09d81ef，声明来源为实现提交。
+- 真实 VS Code 1.94 独立 profile 安装 VSIX，通过 GBK／未保存选区、路径跳转、原生 diff、Import UI Package、应用／回退后发送和草稿恢复；源文件字节未变。
+- 远端仅执行 verify 回查：Actions false，全部 workflow 停用，五个历史 Release 附件数为零，artifact／cache 库存为零。
+- 更新 SOURCE-ONLY 与 VALIDATION 完成状态；所有本地产物继续由 Git 忽略，没有创建 Release、上传附件或启用 Actions。日常项目需用户安装自测。
