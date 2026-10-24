@@ -71,3 +71,21 @@ UI 使用完整官方组件与状态同步。编译时针对 VS Code 的限制�
 GitHub 自动监测和公开发布将在服务器端验证后记录。日常项目验收待用户完成。
 
 自动流水线 [40060291615](https://github.com/HunkYuan/opencode-vscode/actions/runs/40060291615) 已完成 npm 2.1.4 的发现、候选 PR #1、Windows/Linux 验证、自动合并和发布。公开 [ui-2.1.4-vscode.1](https://github.com/HunkYuan/opencode-vscode/releases/tag/ui-2.1.4-vscode.1) 包已通过真实客户端从更新清单下载安装，SHA256 a65fbb7e0afb54c37de2063960c906f74b095faa34a6bda0185f95b36e99f5fd。
+
+## 0.2.0 最终交付验证
+
+| 项目 | 结果 | 证据 |
+|---|---|---|
+| Windows/Linux 扩展检查、单测、VSIX 构建 | 全部通过 | [40061206849](https://github.com/HunkYuan/opencode-vscode/actions/runs/40061206849) |
+| Windows/Linux UI 更新、回退、附件、权限与表单 | 全部通过 | [40061233451](https://github.com/HunkYuan/opencode-vscode/actions/runs/40061233451) |
+| 自动发现 2.1.4 → PR → 校验 → 合并 → 发布 → 清单 | 全链路通过 | [40060291615](https://github.com/HunkYuan/opencode-vscode/actions/runs/40060291615) |
+| 2.1.2 兼容包校验与公开发布 | 全部通过 | [40062127251](https://github.com/HunkYuan/opencode-vscode/actions/runs/40062127251) |
+| 公开 2.1.4 UI ZIP 客户端下载／SHA256 | 通过 | artifacts/public-ui-installed.json |
+| 0.2.0 VSIX 隔离安装及实际运行 | 通过 | artifacts/installed-0.2.0.json / artifacts/vscode-smoke.json |
+| 安装后 GBK、未保存选区、文件定位、原生 diff | 通过 | 真实 VS Code 1.94 + 隔离 2.1.4 service |
+| 安装后更新／回退、草稿保留及再次发送 | 通过 | 真实 VS Code 1.94 |
+| v0.2.0 公开下载及校验文件 | 一致 | artifacts/publish/verified-0.2.0.json |
+
+交付 VSIX 使用 Host 提交 57847de593f05d8b1fbd663d883b561ad06b7582 与公开 UI 提交 0cc5a377c4f79b79c6cbffefa04e4f09887af562，从全新暂存目录组装；33,600,292 bytes，2827 entries，无测试或临时数据。SHA256 8e4e69306370fccb4aaa18ce6ee2d0c87643e7325a2536294940a11f2d418855。
+
+[下载 0.2.0](https://github.com/HunkYuan/opencode-vscode/releases/download/v0.2.0/opencode-sidebar-0.2.0.vsix)；首次安装后执行 Reload Window，后续正常兼容 UI 更新自动下载，下一次正常重载使用。日常项目仍需用户自测。

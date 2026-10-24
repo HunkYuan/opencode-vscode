@@ -2,7 +2,7 @@
 
 结论：将官方 UI、Client SDK 和版本适配一起打成独立包；VS Code 扩展仅保留服务发现、宿主消息协议和原生编辑器能力。通过 UI 包更新减少 VSIX 发布频率。
 
-状态：用户已确认方案并授权开工，实现与本地验证完成，GitHub 自动发现／验证／合并／发布链路已跑通。所有代码与构建产物位于 E:/opencode-vscode；E:/opencode 继续作为只读来源。
+状态：用户已确认方案并授权开工，实现、验证与公开发布完成，GitHub 自动发现／验证／合并／发布链路已跑通；日常项目待用户验收。所有代码与构建产物位于 E:/opencode-vscode；E:/opencode 继续作为只读来源。
 
 ## 目标与边界
 
@@ -148,3 +148,12 @@ Actions 内置 GITHUB_TOKEN 创建 PR 或推送 commit 不会自动触发一般�
 - 当 GitHub Release 与 npm 版本不同，以更高的正式版准备更新；必须存在官方不可变 tag，且源码 package.json 版本一致。
 - 普通自动检查间隔 6 小时；已有缓存可离线加载。下载失败和启动失败保留旧包；手动回退固定选择。
 - UI 缓存位于 globalStorageUri/ui，草稿与 Blob 继续使用既有工作区存储，不按 UI 版本另起命名空间。
+
+## 公开交付
+
+- [v0.2.0 VSIX](https://github.com/HunkYuan/opencode-vscode/releases/tag/v0.2.0) 已公开，32.04 MB；安装并正常重载一次后使用独立 UI 更新。
+- [stable.json](https://raw.githubusercontent.com/HunkYuan/opencode-vscode/ui-updates/stable.json) 当前覆盖 OpenCode 2.1.2 与 2.1.4，各自使用精确验证版本声明。
+- [首次自动更新](https://github.com/HunkYuan/opencode-vscode/actions/runs/40060291615) 已从 npm 发现 2.1.4，验证 Windows/Linux 后自动合并 PR #1、发布并校验 UI ZIP，最后更新清单。
+- [最终 UI 验证](https://github.com/HunkYuan/opencode-vscode/actions/runs/40061233451) 与 [扩展 CI](https://github.com/HunkYuan/opencode-vscode/actions/runs/40061206849) 成功；[2.1.2 兼容包验证与发布](https://github.com/HunkYuan/opencode-vscode/actions/runs/40062127251) 成功。
+- UI Release 使用独立 ui-* 标签，latest Release 为 v0.2.0 VSIX。失败的候选不会推进 stable.json。
+- 安装包：33,600,292 bytes，2827 ZIP entries，SHA256 8e4e69306370fccb4aaa18ce6ee2d0c87643e7325a2536294940a11f2d418855；从公开下载地址重新校验一致。

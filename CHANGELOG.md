@@ -8,7 +8,7 @@
 - feat(editor): move SDK diff queries into the UI package and keep native diff display in Host.
 - test(ui): verify actual package download/reload/rollback, GBK and unsaved attachments, file links and native diff in VS Code.
 
-需首次安装 0.2.0 VSIX；后续兼容 UI 更新独立下载。日常项目需用户自测。
+0.2.0 已发布到 [GitHub Release](https://github.com/HunkYuan/opencode-vscode/releases/tag/v0.2.0)。首次安装后，后续兼容 UI 更新独立下载；日常项目需用户自测。
 
 ## 0.1.1 — 2026-10-22
 

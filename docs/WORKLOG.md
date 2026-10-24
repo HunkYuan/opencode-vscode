@@ -98,3 +98,13 @@
 
 - 公开 2.1.4 UI ZIP 经客户端更新清单下载、完整性校验和真实 VS Code 1.94 验证，GBK／未保存选区／文件定位／原生 diff／应用／回退后发送与草稿保留均通过。
 - UI 发布 workflow 增加验证-only 选项，修正测试时可跑完整 Windows/Linux 校验而不重发不可变版本。
+
+## UI-001 — 独立 UI 更新交付完成 — 2026-10-24
+
+- [最终扩展 CI](https://github.com/HunkYuan/opencode-vscode/actions/runs/40061206849) 与 [UI 专项验证](https://github.com/HunkYuan/opencode-vscode/actions/runs/40061233451) 的 Windows/Linux 均通过。
+- 官方双渠道自动监测已跑通 npm 2.1.4 的发现、候选 PR #1、同提交验证、自动合并、UI Release 与清单发布；定时 workflow 已激活，正常更新无需用户操作。
+- 补充 [2.1.2 兼容 UI](https://github.com/HunkYuan/opencode-vscode/releases/tag/ui-2.1.2-vscode.1)，完整 Windows/Linux 验证后发布；公开清单同时覆盖 2.1.2 和 2.1.4。
+- 公开 2.1.4 UI 经真实客户端下载、校验，在 VS Code 1.94 验证 GBK、未保存选区、文件跳转、原生 diff、更新／回退后实际发送和草稿保留。
+- 0.2.0 VSIX 从干净暂存目录组装，Host 57847de 与公开 UI 0cc5a37；隔离 profile 安装与全部上述编辑器联调通过。日常 profile 未安装。
+- [v0.2.0 Release](https://github.com/HunkYuan/opencode-vscode/releases/tag/v0.2.0) 已公开，VSIX 与 SHA256SUMS.txt 上传后再次从公开地址读取，33,600,292 bytes；SHA256 8e4e69306370fccb4aaa18ce6ee2d0c87643e7325a2536294940a11f2d418855 一致。
+- 现有共享 service 未停止、未重启、未更换版本；最终日常项目验收待用户安装自测。
