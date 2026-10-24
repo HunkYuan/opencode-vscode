@@ -1,0 +1,19 @@
+{
+  "schemaVersion": 1,
+  "releases": [
+    {
+      "schemaVersion": 1,
+      "id": "opencode-2.1.4-vscode.1",
+      "revision": 1,
+      "upstreamVersion": "2.1.4",
+      "upstreamCommit": "68bc26b7da1990ce10ffecfbc1e09eb13aa5d824",
+      "hostProtocol": 1,
+      "serviceRange": "2.1.4",
+      "entry": "index.html",
+      "url": "https://github.com/HunkYuan/opencode-vscode/releases/download/ui-2.1.4-vscode.1/opencode-ui-2.1.4-vscode.1.zip",
+      "sha256": "a65fbb7e0afb54c37de2063960c906f74b095faa34a6bda0185f95b36e99f5fd",
+      "size": 33674162,
+      "sourceCommit": "0cc5a377c4f79b79c6cbffefa04e4f09887af562"
+    }
+  ]
+}
