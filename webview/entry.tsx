@@ -10,11 +10,12 @@ import { bootstrap, call, listen } from "./bridge"
 import { createPlatform } from "./platform"
 import { createRouter } from "./router"
 import { EditorBridge } from "./editor"
-import type { ServiceState } from "../src/protocol"
+import { HOST_PROTOCOL, type ServiceState } from "../src/protocol"
 import { loadLocaleDict, normalizeLocale } from "@opencode/app/desktop"
 
 const root = document.getElementById("root")!
 const initial = await bootstrap()
+if (initial.hostProtocol !== HOST_PROTOCOL) throw new Error("UI 与扩展宿主协议不兼容，请更新插件。")
 const locale = normalizeLocale(initial.locale.toLowerCase().startsWith("zh") ? "zh" : initial.locale)
 await loadLocaleDict(locale)
 const platform = createPlatform(initial)
@@ -69,7 +70,8 @@ render(() => (
     </Show>
   </PlatformProvider>
 ), root)
-void call({ method: "uiReady" })
+// 服务未运行时也完成宿主握手，允许启用／重连消息到达连接界面。
+if (!state.mounted) void call({ method: "uiReady", hostProtocol: HOST_PROTOCOL, uiId: initial.uiId })
 window.addEventListener("unhandledrejection", (event) => {
   void call({ method: "log", message: event.reason instanceof Error ? event.reason.message : "Webview request failed" })
 })

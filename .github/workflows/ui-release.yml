@@ -1,0 +1,57 @@
+name: Publish UI package
+
+on:
+  workflow_dispatch:
+    inputs:
+      source:
+        description: Source commit or branch to validate and publish
+        default: dev
+        required: true
+        type: string
+
+permissions:
+  contents: write
+  actions: read
+
+concurrency:
+  group: ui-release
+  cancel-in-progress: false
+
+jobs:
+  source:
+    runs-on: ubuntu-latest
+    outputs:
+      sha: ${{ steps.source.outputs.sha }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.source }}
+      - id: source
+        run: echo "sha=$(git rev-parse HEAD)" >> "$GITHUB_OUTPUT"
+  validate:
+    needs: source
+    uses: ./.github/workflows/ui-validation.yml
+    with:
+      source: ${{ needs.source.outputs.sha }}
+  publish:
+    needs: [source, validate]
+    runs-on: ubuntu-latest
+    concurrency:
+      group: ui-catalog-publish
+      cancel-in-progress: false
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ needs.source.outputs.sha }}
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: 1.4.2
+      - uses: actions/download-artifact@v4
+        with:
+          name: ui-Linux
+          path: artifacts/ui
+      - name: Publish verified assets and catalog
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+          UI_SOURCE_SHA: ${{ needs.source.outputs.sha }}
+        run: bun artifacts/ui/publish.cjs

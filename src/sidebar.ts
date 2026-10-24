@@ -1,14 +1,14 @@
 import { readFile } from "node:fs/promises"
-import { randomBytes } from "node:crypto"
+import { randomBytes, randomUUID } from "node:crypto"
 import { join, resolve, isAbsolute } from "node:path"
 import { window, workspace, commands, env, Uri, ColorThemeKind, type ExtensionContext, type WebviewView, type WebviewViewProvider, type LogOutputChannel } from "vscode"
-import { request, type Bootstrap, type EditorContext, type HostMessage, type Request, type ServiceState } from "./protocol"
-import { LocalService, ServiceDisabled, ServiceStopped } from "./service"
+import { HOST_PROTOCOL, request, type Bootstrap, type EditorContext, type HostMessage, type Request, type ServiceState } from "./protocol"
+import { LocalService, ServiceDisabled } from "./service"
+import { ServiceStopped } from "./service"
 import { createTransport } from "./transport"
 import { Storage } from "./storage"
 import { activeDirectory, openFile, createReview } from "./editor"
-
-declare const __OPENCODE_VERSION__: string
+import { UiPackages, type UiBundle } from "./ui/packages"
 
 export class Sidebar implements WebviewViewProvider {
   private view?: WebviewView
@@ -16,10 +16,14 @@ export class Sidebar implements WebviewViewProvider {
   private readonly storage: Storage
   private readonly service: LocalService
   private readonly review = createReview()
-  private state: ServiceState = { status: "connecting", uiVersion: __OPENCODE_VERSION__ }
+  private readonly packages: UiPackages
+  private bundle?: UiBundle
+  private boot?: ReturnType<typeof setTimeout>
+  private state: ServiceState = { status: "connecting", uiVersion: "unknown" }
   private sessionID?: string
   private directory?: string
   private readonly queued: HostMessage[] = []
+  private readonly requests = new Map<string, { resolve: (value: { working?: boolean }) => void; reject: (error: Error) => void; timer: ReturnType<typeof setTimeout> }>()
   private connecting?: Promise<ServiceState>
   private initialized = false
   private editorReady = false
@@ -32,6 +36,12 @@ export class Sidebar implements WebviewViewProvider {
       autoStart: () => workspace.getConfiguration("opencodeSidebar").get("autoStart", true),
       log: (message) => log.info(message),
     })
+    this.packages = new UiPackages({
+      directory: join(context.globalStorageUri.fsPath, "ui"),
+      builtinDirectory: join(context.extensionUri.fsPath, "dist/webview"),
+      hostProtocol: HOST_PROTOCOL,
+      log: (message) => log.info(message),
+    })
     context.subscriptions.push(window.onDidChangeActiveColorTheme(() => this.theme()))
     context.subscriptions.push(workspace.onDidChangeConfiguration((event) => {
       if (event.affectsConfiguration("opencodeSidebar.followTheme")) this.theme()
@@ -40,12 +50,10 @@ export class Sidebar implements WebviewViewProvider {
 
   async resolveWebviewView(view: WebviewView) {
     this.view = view
-    this.initialized = false
-    this.editorReady = false
-    this.interfaceReady = false
-    const directory = Uri.joinPath(this.context.extensionUri, "dist", "webview")
-    view.webview.options = { enableScripts: true, localResourceRoots: [directory] }
-    this.bridge ??= await createTransport({ resolve: () => Promise.resolve(this.service.current()).then((endpoint) => endpoint ?? this.service.connect()), log: (message) => this.log.warn(message) })
+    this.bridge ??= await createTransport({
+      resolve: () => Promise.resolve(this.service.current()).then((endpoint) => endpoint ?? this.service.connect()),
+      log: (message) => this.log.warn(message),
+    })
     view.webview.onDidReceiveMessage((input: unknown) => {
       const parsed = request.safeParse(input)
       if (!parsed.success) { this.log.warn("Rejected invalid Webview message"); return }
@@ -58,14 +66,26 @@ export class Sidebar implements WebviewViewProvider {
         },
       )
     }, undefined, this.context.subscriptions)
-    view.webview.html = await this.html(directory)
-    view.onDidDispose(() => { this.view = undefined; this.initialized = false; this.editorReady = false; this.interfaceReady = false; this.bridge?.close(); this.bridge = undefined })
+    await this.reconnect()
+    await this.load(await this.packages.select(this.state.serviceVersion))
+    this.autoUpdate()
+    view.onDidDispose(() => {
+      this.stopBoot()
+      this.view = undefined
+      this.initialized = false
+      this.editorReady = false
+      this.interfaceReady = false
+      this.bridge?.close()
+      this.bridge = undefined
+      this.cancelRequests()
+    })
   }
 
   async focus() {
     await commands.executeCommand("workbench.view.extension.opencodeSidebar")
     await commands.executeCommand("opencodeSidebar.chat.focus")
     this.view?.show(false)
+    if (this.initialized) this.autoUpdate()
   }
 
   async attach(context: EditorContext) {
@@ -77,8 +97,7 @@ export class Sidebar implements WebviewViewProvider {
   async newSession() {
     await this.focus()
     const directory = activeDirectory() ?? await this.pickDirectory()
-    if (!directory) return
-    this.send({ type: "newSession", directory })
+    if (directory) this.send({ type: "newSession", directory })
   }
 
   reconnect() {
@@ -90,11 +109,11 @@ export class Sidebar implements WebviewViewProvider {
     if (this.state.status !== "ready") this.state = { ...this.state, status: "connecting", message: "正在连接本机共享服务…" }
     this.send({ type: "service", service: this.state })
     const endpoint = await this.service.connect().catch((error: unknown) => {
-      this.state = { uiVersion: __OPENCODE_VERSION__, url: this.bridge?.url, status: error instanceof ServiceDisabled ? "disabled" : error instanceof ServiceStopped ? "stopped" : "error", message: error instanceof Error ? error.message : "OpenCode connection failed" }
+      this.state = { uiVersion: this.bundle?.manifest.upstreamVersion ?? "unknown", url: this.bridge?.url, status: error instanceof ServiceDisabled ? "disabled" : error instanceof ServiceStopped ? "stopped" : "error", message: error instanceof Error ? error.message : "OpenCode connection failed" }
       this.log.warn(this.state.message ?? "OpenCode connection failed")
       return undefined
     })
-    if (endpoint) this.state = { status: "ready", uiVersion: __OPENCODE_VERSION__, url: this.bridge?.url, serviceVersion: endpoint.version, mismatch: endpoint.version !== __OPENCODE_VERSION__ }
+    if (endpoint) this.state = { status: "ready", uiVersion: this.bundle?.manifest.upstreamVersion ?? "unknown", url: this.bridge?.url, serviceVersion: endpoint.version, mismatch: this.bundle ? endpoint.version !== this.bundle.manifest.upstreamVersion : false }
     this.send({ type: "service", service: this.state })
     return this.state
   }
@@ -105,13 +124,90 @@ export class Sidebar implements WebviewViewProvider {
   }
 
   async reviewChanges() {
+    await this.focus()
     if (!this.sessionID) { await window.showInformationMessage("先选择一个已开始的会话，再审阅改动。"); return }
-    await this.review.open(await this.service.connect(), this.sessionID)
+    await this.ask({ type: "review", sessionID: this.sessionID })
+  }
+
+  async checkUIUpdates(force = true) {
+    const current = this.bundle ?? await this.packages.select(this.state.serviceVersion)
+    const next = await this.packages.check(this.state.serviceVersion, current, force)
+    if (force) await window.showInformationMessage(next
+      ? `UI ${next.manifest.id} 已下载，下次重载自动使用；也可执行 Apply UI Update。`
+      : "当前没有可用的兼容 UI 更新。")
+    return next?.manifest.id
+  }
+
+  private autoUpdate() {
+    if (workspace.getConfiguration("opencodeSidebar").get("uiAutoUpdate", true) && this.state.status === "ready")
+      void this.checkUIUpdates(false).catch((error: unknown) => this.log.warn(`UI update check failed: ${error instanceof Error ? error.message : String(error)}`))
+  }
+
+  async applyUIUpdate() {
+    const next = await this.packages.pending()
+    if (!next) { await window.showInformationMessage("当前没有待应用的 UI 更新。"); return }
+    if (!await this.prepareReload()) return
+    await this.load(next)
+  }
+
+  async rollbackUI() {
+    if (!await this.prepareReload()) return
+    await this.load(await this.packages.rollback(this.state.serviceVersion))
   }
 
   dispose() {
+    this.stopBoot()
+    this.cancelRequests()
     this.bridge?.close()
     this.review.dispose()
+  }
+
+  private async prepareReload() {
+    if (!this.initialized) return true
+    const status = await this.ask({ type: "prepareReload" })
+    if (!status.working) return true
+    await window.showInformationMessage("OpenCode 仍在工作，完成后再应用 UI 更新。")
+    return false
+  }
+
+  private async load(bundle: UiBundle) {
+    if (!this.view) return
+    this.stopBoot()
+    this.cancelRequests()
+    const previous = this.bundle
+    this.bundle = bundle
+    this.initialized = false
+    this.editorReady = false
+    this.interfaceReady = false
+    this.state = { ...this.state, uiVersion: bundle.manifest.upstreamVersion, mismatch: !!this.state.serviceVersion && this.state.serviceVersion !== bundle.manifest.upstreamVersion }
+    const directory = Uri.file(bundle.directory)
+    this.view.webview.options = { enableScripts: true, localResourceRoots: previous ? [directory, Uri.file(previous.directory)] : [directory] }
+    this.view.webview.html = await this.html(directory, bundle.manifest.entry)
+    // uiReady 在官方界面挂载后发出；下载包未完成握手时只回退 UI，不动共享 service。
+    this.boot = setTimeout(() => { void this.bootFailed(bundle).catch((error: unknown) => this.log.error(String(error))) }, 30_000)
+    this.log.info(`Loading UI package ${bundle.manifest.id}`)
+  }
+
+  private async bootFailed(bundle: UiBundle) {
+    if (this.bundle !== bundle || this.initialized) return
+    this.log.error(`UI package ${bundle.manifest.id} did not finish startup`)
+    const builtin = await this.packages.bundled()
+    const pending = await this.packages.pending()
+    if (pending && pending.manifest.id !== bundle.manifest.id) {
+      await this.load(pending)
+      return
+    }
+    if (bundle.manifest.id === builtin.manifest.id) {
+      await window.showErrorMessage("OpenCode UI 启动失败，请查看插件日志。")
+      return
+    }
+    await this.packages.failed(bundle)
+    await this.load(await this.packages.select(this.state.serviceVersion))
+  }
+
+  private stopBoot() {
+    if (this.boot) clearTimeout(this.boot)
+    this.boot = undefined
   }
 
   private send(message: HostMessage) {
@@ -124,8 +220,28 @@ export class Sidebar implements WebviewViewProvider {
 
   private flush() {
     if (!this.initialized) return
-    const pending = this.queued.splice(0)
-    pending.forEach((message) => this.send(message))
+    this.queued.splice(0).forEach((message) => this.send(message))
+  }
+
+  private ask(message: { type: "prepareReload" } | { type: "review"; sessionID: string }) {
+    if (!this.initialized) throw new Error("UI 尚未就绪，请稍后重试。")
+    const requestID = randomUUID()
+    return new Promise<{ working?: boolean }>((resolve, reject) => {
+      const timer = setTimeout(() => {
+        this.requests.delete(requestID)
+        reject(new Error("UI 未响应宿主请求，请查看插件日志。"))
+      }, 30_000)
+      this.requests.set(requestID, { resolve, reject, timer })
+      this.send({ ...message, requestID })
+    })
+  }
+
+  private cancelRequests() {
+    this.requests.forEach((request) => {
+      clearTimeout(request.timer)
+      request.reject(new Error("UI has been reloaded"))
+    })
+    this.requests.clear()
   }
 
   private theme() {
@@ -135,9 +251,12 @@ export class Sidebar implements WebviewViewProvider {
   private async handle(input: Request): Promise<unknown> {
     switch (input.method) {
       case "ready": {
+        if (input.hostProtocol !== HOST_PROTOCOL || input.uiId !== this.bundle?.manifest.id)
+          throw new Error("UI 与扩展宿主协议不兼容，请更新插件或回退 UI。")
         this.bridge?.setOrigin(input.origin)
-        await this.reconnect()
         const bootstrap: Bootstrap = {
+          hostProtocol: HOST_PROTOCOL,
+          uiId: this.bundle.manifest.id,
           service: this.state,
           directory: activeDirectory() ?? this.directory,
           route: this.context.workspaceState.get("route", "/"),
@@ -146,26 +265,30 @@ export class Sidebar implements WebviewViewProvider {
           theme: window.activeColorTheme.kind === ColorThemeKind.Light || window.activeColorTheme.kind === ColorThemeKind.HighContrastLight ? "light" : "dark",
           followTheme: workspace.getConfiguration("opencodeSidebar").get("followTheme", true),
         }
-        // 消息桥握手后排队上下文需要等 UI 的组件订阅完成，再由 uiReady 刷新。
         return bootstrap
       }
       case "uiReady": {
+        if (input.hostProtocol !== HOST_PROTOCOL || input.uiId !== this.bundle?.manifest.id) throw new Error("Invalid UI startup handshake")
         this.initialized = true
+        this.stopBoot()
+        await this.packages.loaded(this.bundle)
         this.flush()
         this.send({ type: "service", service: this.state })
         this.theme()
+        this.autoUpdate()
         return
       }
-      case "editorReady": {
-        this.editorReady = input.ready
-        if (input.ready) this.flush()
+      case "hostResult": {
+        const pending = this.requests.get(input.requestID)
+        if (!pending) return
+        clearTimeout(pending.timer)
+        this.requests.delete(input.requestID)
+        if (input.error) pending.reject(new Error(input.error))
+        if (!input.error) pending.resolve({ working: input.working })
         return
       }
-      case "interfaceReady": {
-        this.interfaceReady = input.ready
-        if (input.ready) this.flush()
-        return
-      }
+      case "editorReady": { this.editorReady = input.ready; if (input.ready) this.flush(); return }
+      case "interfaceReady": { this.interfaceReady = input.ready; if (input.ready) this.flush(); return }
       case "reconnect": return this.reconnect()
       case "enableService": return this.enableService()
       case "openExternal": {
@@ -190,10 +313,9 @@ export class Sidebar implements WebviewViewProvider {
         this.sessionID = input.sessionID
         this.directory = input.directory
         await this.context.workspaceState.update("route", input.route)
-
         return
       }
-      case "review": return this.review.open(await this.service.connect(), input.sessionID)
+      case "review": return this.review.open(input.sessionID, input.changes)
       case "log": this.log.info(input.message); return
     }
   }
@@ -207,12 +329,12 @@ export class Sidebar implements WebviewViewProvider {
     return window.showOpenDialog({ canSelectFolders: true, canSelectFiles: false, canSelectMany: false }).then((items) => items?.[0]?.fsPath ?? null)
   }
 
-  private async html(directory: Uri) {
+  private async html(directory: Uri, entry: string) {
     const webview = this.view!.webview
     const nonce = randomBytes(24).toString("base64")
     const base = webview.asWebviewUri(directory).toString() + "/"
     const port = new URL(this.bridge!.url).origin
-    const html = await readFile(Uri.joinPath(directory, "index.html").fsPath, "utf8")
+    const html = await readFile(Uri.joinPath(directory, entry).fsPath, "utf8")
     const policy = `default-src 'none'; script-src ${webview.cspSource} 'nonce-${nonce}' 'wasm-unsafe-eval'; style-src ${webview.cspSource} 'unsafe-inline'; img-src ${webview.cspSource} data: blob: https: ${port}; font-src ${webview.cspSource} data:; media-src ${webview.cspSource} data: blob: ${port}; connect-src ${port} ${port.replace("http:", "ws:")} ${webview.cspSource} data: blob:; worker-src blob: data:;`
     return html.replace('<div id="root"></div>', '<div id="root"><main class="connection-screen"><h2>OpenCode</h2><p>正在连接本机共享服务…</p></main></div>')
       .replace("<head>", `<head><base href="${base}"><meta http-equiv="Content-Security-Policy" content="${policy}">`)

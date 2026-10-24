@@ -2,7 +2,7 @@ import { mkdir, readFile, writeFile, access, unlink } from "node:fs/promises"
 import { join } from "node:path"
 import { createHash } from "node:crypto"
 import type { Memento } from "vscode"
-import type { JsonValue } from "@opencode/client/promise"
+import type { JsonValue } from "./protocol"
 
 export class Storage {
   private readonly writes = new Map<string, Promise<void>>()

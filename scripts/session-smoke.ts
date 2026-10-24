@@ -10,6 +10,7 @@ import { locateCli } from "../src/service"
 import { createTransport } from "../src/transport"
 
 const root = resolve(import.meta.dir, "..")
+const ui = await Bun.file(join(process.env.OPENCODE_TEST_WEBVIEW ?? join(root, "dist/webview"), "ui-manifest.json")).json()
 const isolated = await mkdtemp(join(root, "artifacts/session-test-"))
 const environment = { ...process.env, XDG_CONFIG_HOME: join(isolated, "config"), XDG_DATA_HOME: join(isolated, "data"), XDG_CACHE_HOME: join(isolated, "cache"), XDG_STATE_HOME: join(isolated, "state") }
 const probe = net.createServer()
@@ -17,7 +18,7 @@ await new Promise<void>((resolve) => probe.listen(0, "127.0.0.1", resolve))
 const address = probe.address()
 if (!address || typeof address === "string") throw new Error("No test port")
 await new Promise<void>((resolve) => probe.close(() => resolve()))
-const executable = await locateCli("")
+const executable = await locateCli(process.env.OPENCODE_TEST_CLI_PATH ?? "")
 const execute = promisify(execFile)
 const command = async (...args: string[]) => (await execute(executable, args, { env: environment, windowsHide: true, timeout: 130000 })).stdout.trim()
 await mkdir(join(environment.XDG_CONFIG_HOME, "opencode"), { recursive: true })
@@ -61,7 +62,7 @@ try {
  const storage = new Map<string, Record<string, string>>()
  await page.exposeFunction("hostMessage", async (input: Record<string, unknown>) => {
   const result = () => {
-   if (input.method === "ready") return { service: { status: "ready", url: transport.url, serviceVersion: "2.1.2", uiVersion: "2.1.2" }, route, directory: root, windowID: "session-test", locale: "zh", theme: "dark", followTheme: true }
+   if (input.method === "ready") return { hostProtocol: 1, uiId: ui.id, service: { status: "ready", url: transport.url, serviceVersion: "2.1.2", uiVersion: "2.1.2" }, route, directory: root, windowID: "session-test", locale: "zh", theme: "dark", followTheme: true }
    if (input.method === "storageRead") return storage.get(String(input.name)) ?? {}
    if (input.method === "storageWrite") { storage.set(String(input.name), { ...storage.get(String(input.name)), ...input.values as Record<string, string> }); return }
    if (input.method === "draftGet") return null

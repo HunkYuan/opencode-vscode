@@ -1,5 +1,15 @@
 # Changelog
 
+## 0.2.0 — 2026-10-24
+
+- feat(ui): separate official UI/Client SDK packages from the stable VS Code Host.
+- feat(ui): automatically download compatible packages, verify SHA256, preserve drafts and support reload/rollback.
+- feat(ui): monitor GitHub/npm stable releases, validate fixed candidates on Windows/Linux, merge and publish automatically.
+- feat(editor): move SDK diff queries into the UI package and keep native diff display in Host.
+- test(ui): verify actual package download/reload/rollback, GBK and unsaved attachments, file links and native diff in VS Code.
+
+需首次安装 0.2.0 VSIX；后续兼容 UI 更新独立下载。日常项目需用户自测。
+
 ## 0.1.1 — 2026-10-22
 
 - fix(editor): send decoded editor snapshots through official text attachments so saved GBK files reach the model.

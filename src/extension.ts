@@ -15,6 +15,9 @@ export function activate(context: ExtensionContext) {
     reconnect: () => sidebar.reconnect(),
     enableService: () => sidebar.enableService(),
     logs: () => output.show(),
+    checkUIUpdates: () => sidebar.checkUIUpdates(),
+    applyUIUpdate: () => sidebar.applyUIUpdate(),
+    rollbackUI: () => sidebar.rollbackUI(),
   }
   Object.entries(actions).forEach(([name, action]) => context.subscriptions.push(commands.registerCommand("opencodeSidebar." + name, () =>
     Promise.resolve().then(async () => { await action() }).catch((error: unknown) => {

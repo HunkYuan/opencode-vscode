@@ -1,4 +1,6 @@
-import type { Bootstrap, HostMessage, Request } from "../src/protocol"
+import { HOST_PROTOCOL, type Bootstrap, type HostMessage, type Request } from "../src/protocol"
+import type { UiManifest } from "../src/ui/manifest"
+declare const __UI_PACKAGE__: UiManifest
 
 declare function acquireVsCodeApi(): { postMessage(message: Request): void }
 const vscode = acquireVsCodeApi()
@@ -30,5 +32,5 @@ export function listen(handler: (message: HostMessage) => void) {
   return () => { handlers.delete(handler) }
 }
 export function bootstrap() {
-  return call<Bootstrap>({ method: "ready", origin: location.origin })
+  return call<Bootstrap>({ method: "ready", origin: location.origin, hostProtocol: HOST_PROTOCOL, uiId: __UI_PACKAGE__.id })
 }

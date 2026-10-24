@@ -16,7 +16,8 @@ export async function createAttachmentFixture() {
   const root = resolve(import.meta.dir, "..")
   await mkdir(join(root, "artifacts"), { recursive: true })
   const directory = await mkdtemp(join(root, "artifacts/attachment-test-"))
-  const project = join(directory, "project")
+  // VS Code 的 file URI 会把 Windows 盘符规范化成小写；fixture 与 UI 必须预热同一 location。
+  const project = join(directory, "project").replace(/^[A-Z]:/, (drive) => drive.toLowerCase())
   const environment = {
     ...process.env,
     XDG_CONFIG_HOME: join(directory, "config"),
@@ -25,6 +26,7 @@ export async function createAttachmentFixture() {
     XDG_STATE_HOME: join(directory, "state"),
   }
   const requests: ProviderRequest[] = []
+  const reply = { text: "附件验证完成。" }
   const provider = Bun.serve({
     hostname: "127.0.0.1",
     port: 0,
@@ -32,7 +34,7 @@ export async function createAttachmentFixture() {
       requests.push(await request.json() as ProviderRequest)
       const chunk = { id: "chatcmpl_fixture", object: "chat.completion.chunk", created: 1, model: "snapshot" }
       return new Response([
-        "data: " + JSON.stringify({ ...chunk, choices: [{ index: 0, delta: { role: "assistant", content: "附件验证完成。" }, finish_reason: null }] }),
+        "data: " + JSON.stringify({ ...chunk, choices: [{ index: 0, delta: { role: "assistant", content: reply.text }, finish_reason: null }] }),
         "data: " + JSON.stringify({ ...chunk, choices: [{ index: 0, delta: {}, finish_reason: "stop" }], usage: { prompt_tokens: 1, completion_tokens: 1, total_tokens: 2 } }),
         "data: [DONE]",
         "",
@@ -43,7 +45,7 @@ export async function createAttachmentFixture() {
   const port = probe.port
   probe.stop(true)
   const execute = promisify(execFile)
-  const executable = await locateCli("")
+  const executable = await locateCli(process.env.OPENCODE_TEST_CLI_PATH ?? "")
   const command = async (...args: string[]) =>
     (await execute(executable, args, { env: environment, windowsHide: true, timeout: 130_000 })).stdout.trim()
 
@@ -90,8 +92,9 @@ export async function createAttachmentFixture() {
 
   const url = await command("service", "start").catch((error: unknown) => { provider.stop(true); throw error })
   const password = await command("service", "get", "password")
-  const endpoint = { url, password, version: "2.1.2" }
   const api = OpenCode.make({ baseUrl: url, headers: { Authorization: "Basic " + Buffer.from("opencode:" + password).toString("base64") } })
+
+  const endpoint = { url, password, version: (await api.server.info()).version }
 
   // 新 location 首次加载插件是异步的；等待专用 Agent 完成配置，再挂载 UI。
   await api.session.create({ location: { directory: project }, title: "Attachment fixture bootstrap", agent: "build", model: { providerID: "attachment-fixture", id: "snapshot" } })
@@ -106,6 +109,7 @@ export async function createAttachmentFixture() {
     contexts,
     raw,
     requests,
+    reply,
     async waitForModel(snapshot: string) {
       await expect.poll(() => requests.some((request) => providerText(request).includes(snapshot)), { timeout: 30_000 }).toBe(true)
     },

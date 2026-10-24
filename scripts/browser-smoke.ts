@@ -6,6 +6,7 @@ import { LocalService } from "../src/service"
 import { createTransport } from "../src/transport"
 
 const root = resolve(import.meta.dir, "..")
+const ui = await Bun.file(join(process.env.OPENCODE_TEST_WEBVIEW ?? join(root, "dist/webview"), "ui-manifest.json")).json()
 await mkdir(join(root, "artifacts"), { recursive: true })
 const service = new LocalService({ cliPath: () => "", autoStart: () => false, log: (message) => console.log(message) })
 const endpoint = await service.connect()
@@ -31,7 +32,7 @@ page.on("console", (message) => { if (message.type() === "error") console.error(
 const data = new Map<string, Record<string, string>>()
 await page.exposeFunction("hostMessage", async (input: Record<string, unknown>) => {
   const result = async () => {
-    if (input.method === "ready") return { service: { status: "ready", url: transport.url, serviceVersion: endpoint.version, uiVersion: "2.1.2" }, directory: root, route: "/", windowID: "browser-smoke", locale: "zh", theme: "dark", followTheme: true }
+    if (input.method === "ready") return { hostProtocol: 1, uiId: ui.id, service: { status: "ready", url: transport.url, serviceVersion: endpoint.version, uiVersion: "2.1.2" }, directory: root, route: "/", windowID: "browser-smoke", locale: "zh", theme: "dark", followTheme: true }
     if (input.method === "storageRead") return data.get(String(input.name)) ?? {}
     if (input.method === "storageWrite") {
       const values = { ...data.get(String(input.name)), ...input.values as Record<string, string> }

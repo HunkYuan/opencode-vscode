@@ -8,6 +8,7 @@ import { Storage } from "../src/storage"
 import type { Memento } from "vscode"
 
 const root = resolve(import.meta.dir, "..")
+const ui = await Bun.file(join(process.env.OPENCODE_TEST_WEBVIEW ?? join(root, "dist/webview"), "ui-manifest.json")).json()
 await mkdir(join(root, "artifacts"), { recursive: true })
 const service = new LocalService({ cliPath: () => "", autoStart: () => false, log: console.log })
 const endpoint = await service.connect()
@@ -37,7 +38,7 @@ page.on("pageerror", (error) => errors.push(error.message))
 await page.exposeFunction("hostMessage", async (input: Record<string, unknown>) => {
  const result = async () => {
    switch (input.method) {
-     case "ready": return { service: { status: "ready", url: transport.url, serviceVersion: endpoint.version, uiVersion: "2.1.2" }, directory: root, route, windowID: "interaction", locale: "zh", theme: "dark", followTheme: true }
+     case "ready": return { hostProtocol: 1, uiId: ui.id, service: { status: "ready", url: transport.url, serviceVersion: endpoint.version, uiVersion: "2.1.2" }, directory: root, route, windowID: "interaction", locale: "zh", theme: "dark", followTheme: true }
      case "storageRead": return storage.read(String(input.name))
      case "storageWrite": return storage.write(String(input.name), input.values as Record<string, string | null>)
      case "draftGet": return storage.draftGet(String(input.key))

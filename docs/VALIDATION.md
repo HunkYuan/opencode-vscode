@@ -52,3 +52,20 @@ UI 使用完整官方组件与状态同步。编译时针对 VS Code 的限制�
 - 源码提交的 [Windows/Linux CI](https://github.com/HunkYuan/opencode-vscode/actions/runs/39773765818) 成功。
 - 已通过公开地址重新下载 [VSIX](https://github.com/HunkYuan/opencode-vscode/releases/download/v0.1.1/opencode-sidebar-0.1.1.vsix) 和 [SHA256SUMS.txt](https://github.com/HunkYuan/opencode-vscode/releases/download/v0.1.1/SHA256SUMS.txt)；安装包 33,351,040 bytes，SHA256 与本机已验证安装包和校验附件一致。
 - 发布说明见 [v0.1.1](releases/v0.1.1.md)。
+
+## 0.2.0 独立 UI 包
+
+| 验证 | 结果 | 证据 |
+|---|---|---|
+| Host 不依赖 OpenCode SDK/GUI | 通过，构建守卫 | scripts/build-host.ts / artifacts/host-inputs.json |
+| lint、typecheck、契约测试 | 通过，13 tests | bun run check / bun test ./test |
+| UI ZIP 构建及许可 | 通过 | artifacts/ui/release.json |
+| 下载校验、包路径、兼容选择、回退 | 通过 | test/ui-packages.test.ts |
+| 完整 UI 下载、重载、草稿、发送和回退 | 通过 | artifacts/ui-update-smoke.json |
+| 六类附件到服务端及模型 | 通过 | artifacts/attachment-smoke.json |
+| 权限实际回复与提问表单 | 通过，隔离 2.1.2 CLI | scripts/session-smoke.ts |
+| 真实 VS Code 文件与未保存选区 | 通过 | artifacts/vscode-smoke.json |
+| 真实 VS Code 文件定位及原生 diff | 通过 | artifacts/vscode-smoke.json |
+| 更新后／回退后实际发送及草稿保留 | 通过 | artifacts/vscode-smoke.json |
+
+GitHub 自动监测和公开发布将在服务器端验证后记录。日常项目验收待用户完成。

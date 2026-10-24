@@ -6,3 +6,5 @@
 !media/**
 !dist/**
 !docs/images/**
+
+dist/licenses/**

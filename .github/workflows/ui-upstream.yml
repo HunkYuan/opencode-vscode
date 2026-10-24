@@ -1,0 +1,86 @@
+name: Update official UI
+
+on:
+  schedule:
+    - cron: "17 */6 * * *"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+  pull-requests: write
+  actions: read
+
+concurrency:
+  group: ui-upstream
+  cancel-in-progress: false
+
+jobs:
+  prepare:
+    runs-on: ubuntu-latest
+    outputs:
+      changed: ${{ steps.prepare.outputs.changed }}
+      source: ${{ steps.prepare.outputs.source }}
+      pull: ${{ steps.prepare.outputs.pull }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: dev
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: 1.4.2
+      - run: bun run setup
+      - run: bun install --frozen-lockfile
+      - name: Discover GitHub and npm stable versions
+        id: prepare
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+        run: bun scripts/ui-upstream.ts prepare
+  validate:
+    needs: prepare
+    if: needs.prepare.outputs.changed == 'true'
+    uses: ./.github/workflows/ui-validation.yml
+    with:
+      source: ${{ needs.prepare.outputs.source }}
+  merge:
+    needs: [prepare, validate]
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ needs.prepare.outputs.source }}
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: 1.4.2
+      - name: Bundle validated automation
+        uses: actions/download-artifact@v4
+        with:
+          name: ui-Linux
+          path: artifacts/ui
+      - name: Merge only the validated candidate
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+          UI_SOURCE_SHA: ${{ needs.prepare.outputs.source }}
+          UI_PULL_NUMBER: ${{ needs.prepare.outputs.pull }}
+        run: bun artifacts/ui/upstream.cjs merge
+  publish:
+    needs: [prepare, validate, merge]
+    runs-on: ubuntu-latest
+    concurrency:
+      group: ui-catalog-publish
+      cancel-in-progress: false
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ needs.prepare.outputs.source }}
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: 1.4.2
+      - uses: actions/download-artifact@v4
+        with:
+          name: ui-Linux
+          path: artifacts/ui
+      - name: Publish verified UI and update catalog
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+          UI_SOURCE_SHA: ${{ needs.prepare.outputs.source }}
+        run: bun artifacts/ui/publish.cjs

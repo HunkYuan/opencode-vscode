@@ -1,8 +1,6 @@
 import { window, workspace, commands, Uri, Position, Range, Selection, type TextDocumentContentProvider, FileType } from "vscode"
 import { isAbsolute, relative, resolve } from "node:path"
-import { OpenCode } from "@opencode/client/promise"
-import type { EditorContext } from "./protocol"
-import type { Endpoint } from "./service"
+import type { EditorContext, ReviewChange } from "./protocol"
 import { diffSides } from "./diff"
 
 export function activeDirectory() {
@@ -50,9 +48,7 @@ export function createReview() {
   const provider: TextDocumentContentProvider = { provideTextDocumentContent: (uri) => documents.get(uri.toString()) ?? "" }
   const registration = workspace.registerTextDocumentContentProvider("opencode-review", provider)
   return {
-    async open(endpoint: Endpoint, sessionID: string) {
-      const api = OpenCode.make({ baseUrl: endpoint.url, headers: { Authorization: "Basic " + Buffer.from("opencode:" + endpoint.password).toString("base64") } })
-      const changes = await api.session.diff({ sessionID })
+    async open(sessionID: string, changes: ReviewChange[]) {
       if (!changes.length) { await window.showInformationMessage("当前会话这一轮没有文件改动。"); return }
       const selected = changes.length === 1 ? changes[0]! : await window.showQuickPick(
         changes.map((change) => ({ label: change.file, description: `+${change.additions} −${change.deletions}`, change })),

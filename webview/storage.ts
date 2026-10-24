@@ -2,6 +2,17 @@ import { createDraftStore } from "@opencode/app/desktop"
 import type { AsyncStorage } from "@solid-primitives/storage"
 import { call } from "./bridge"
 
+const writes = new Set<Promise<unknown>>()
+function writing<T>(value: Promise<T>) {
+  writes.add(value)
+  void value.then(() => writes.delete(value), () => writes.delete(value))
+  return value
+}
+
+export async function flushStorage() {
+  while (writes.size) await Promise.all(writes)
+}
+
 export function createStorage() {
   const namespaces = new Map<string, AsyncStorage>()
   return (name = "default"): AsyncStorage => {
@@ -12,20 +23,26 @@ export function createStorage() {
     const load = () => values ? Promise.resolve(values) : loading ??= call<Record<string, string>>({ method: "storageRead", name }).then((result) => values = result)
     const storage: AsyncStorage = {
       async getItem(key) { return (await load())[key] ?? null },
-      async setItem(key, value) {
-        const current = await load()
-        current[key] = value
-        await call({ method: "storageWrite", name, values: { [key]: value } })
+      setItem(key, value) {
+        return writing((async () => {
+          const current = await load()
+          current[key] = value
+          await call({ method: "storageWrite", name, values: { [key]: value } })
+        })())
       },
-      async removeItem(key) {
-        const current = await load()
-        delete current[key]
-        await call({ method: "storageWrite", name, values: { [key]: null } })
+      removeItem(key) {
+        return writing((async () => {
+          const current = await load()
+          delete current[key]
+          await call({ method: "storageWrite", name, values: { [key]: null } })
+        })())
       },
-      async clear() {
-        const current = await load()
-        await call({ method: "storageWrite", name, values: Object.fromEntries(Object.keys(current).map((key) => [key, null])) })
-        values = {}
+      clear() {
+        return writing((async () => {
+          const current = await load()
+          await call({ method: "storageWrite", name, values: Object.fromEntries(Object.keys(current).map((key) => [key, null])) })
+          values = {}
+        })())
       },
       async key(index: number) { return Object.keys(await load())[index] },
       get length() { return load().then((value) => Object.keys(value).length) },
@@ -36,7 +53,7 @@ export function createStorage() {
 }
 
 export function createDrafts() {
-  return createDraftStore({
+  const store = createDraftStore({
     get: (key) => call<string | null>({ method: "draftGet", key }),
     set: (key, value, strict) => call<string[]>({ method: "draftSet", key, value, strict }),
     remove: (key) => call<void>({ method: "draftRemove", key }),
@@ -50,4 +67,11 @@ export function createDrafts() {
       return result ? new Blob([Uint8Array.from(atob(result.data), (char) => char.charCodeAt(0))], { type: result.mime }) : null
     },
   })
+  return {
+    ...store,
+    setItem: (key: string, value: string) => writing(store.setItem(key, value)),
+    setDocument: (key: string, value: unknown) => writing(store.setDocument(key, value)),
+    removeItem: (key: string) => writing(store.removeItem(key)),
+    putBlob: (blob: Blob) => writing(store.putBlob(blob)),
+  }
 }

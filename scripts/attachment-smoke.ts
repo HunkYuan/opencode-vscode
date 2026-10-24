@@ -10,6 +10,7 @@ import { createTransport } from "../src/transport"
 import { Storage } from "../src/storage"
 
 const root = resolve(import.meta.dir, "..")
+const ui = await Bun.file(join(process.env.OPENCODE_TEST_WEBVIEW ?? join(root, "dist/webview"), "ui-manifest.json")).json()
 const webview = process.env.OPENCODE_TEST_WEBVIEW ?? join(root, "dist/webview")
 await using fixture = await createAttachmentFixture()
 const transport = await createTransport({ resolve: async () => fixture.endpoint, log: console.warn })
@@ -43,7 +44,7 @@ page.on("console", (message) => { if (message.type() === "error") console.error(
 await page.exposeFunction("hostMessage", async (input: Record<string, unknown>) => {
   const result = async () => {
     switch (input.method) {
-      case "ready": return { service: { status: "ready", url: transport.url, serviceVersion: fixture.endpoint.version, uiVersion: "2.1.2" }, directory: fixture.project, route, windowID: "attachment-test", locale: "zh", theme: "dark", followTheme: true }
+      case "ready": return { hostProtocol: 1, uiId: ui.id, service: { status: "ready", url: transport.url, serviceVersion: fixture.endpoint.version, uiVersion: "2.1.2" }, directory: fixture.project, route, windowID: "attachment-test", locale: "zh", theme: "dark", followTheme: true }
       case "storageRead": return storage.read(String(input.name))
       case "storageWrite": return storage.write(String(input.name), input.values as Record<string, string | null>)
       case "draftGet": return storage.draftGet(String(input.key))

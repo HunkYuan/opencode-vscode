@@ -30,11 +30,14 @@ jobs:
       - name: Lint and typecheck
         run: bun run check
       - name: Test adapter contracts
-        run: bun test test
+        run: bun test ./test
       - name: Build VSIX
         run: bun run package
       - uses: actions/upload-artifact@v4
         with:
           name: opencode-sidebar-${{ matrix.os }}
-          path: "*.vsix"
+          path: |
+            *.vsix
+            artifacts/ui/*.zip
+            artifacts/ui/release.json
           if-no-files-found: error

@@ -1,5 +1,8 @@
 import { z } from "zod"
 
+export const HOST_PROTOCOL = 1
+export type JsonValue = string | number | boolean | null | JsonValue[] | { [key: string]: JsonValue }
+
 export const editorContext = z.object({
   directory: z.string(),
   path: z.string(),
@@ -12,8 +15,15 @@ export const editorContext = z.object({
     endChar: z.number().int().nonnegative(),
   }).optional(),
 })
-
 export type EditorContext = z.infer<typeof editorContext>
+export const reviewChange = z.object({
+  file: z.string(),
+  additions: z.number().int().nonnegative(),
+  deletions: z.number().int().nonnegative(),
+  patch: z.string(),
+})
+export type ReviewChange = z.infer<typeof reviewChange>
+
 export type ServiceState = {
   status: "connecting" | "ready" | "disabled" | "stopped" | "error"
   message?: string
@@ -24,8 +34,9 @@ export type ServiceState = {
 }
 
 export const request = z.discriminatedUnion("method", [
-  z.object({ id: z.string(), method: z.literal("ready"), origin: z.string() }),
-  z.object({ id: z.string(), method: z.literal("uiReady") }),
+  z.object({ id: z.string(), method: z.literal("ready"), origin: z.string(), hostProtocol: z.number().int(), uiId: z.string() }),
+  z.object({ id: z.string(), method: z.literal("uiReady"), hostProtocol: z.number().int(), uiId: z.string() }),
+  z.object({ id: z.string(), method: z.literal("hostResult"), requestID: z.string(), working: z.boolean().optional(), error: z.string().optional() }),
   z.object({ id: z.string(), method: z.literal("editorReady"), ready: z.boolean() }),
   z.object({ id: z.string(), method: z.literal("interfaceReady"), ready: z.boolean() }),
   z.object({ id: z.string(), method: z.literal("reconnect") }),
@@ -43,12 +54,14 @@ export const request = z.discriminatedUnion("method", [
   z.object({ id: z.string(), method: z.literal("blobPut"), data: z.string(), mime: z.string() }),
   z.object({ id: z.string(), method: z.literal("blobGet"), key: z.string() }),
   z.object({ id: z.string(), method: z.literal("route"), route: z.string(), sessionID: z.string().optional(), directory: z.string().optional() }),
-  z.object({ id: z.string(), method: z.literal("review"), sessionID: z.string(), directory: z.string() }),
+  z.object({ id: z.string(), method: z.literal("review"), sessionID: z.string(), changes: z.array(reviewChange) }),
   z.object({ id: z.string(), method: z.literal("log"), message: z.string() }),
 ])
 
 export type Request = z.infer<typeof request>
 export type Bootstrap = {
+  hostProtocol: number
+  uiId: string
   service: ServiceState
   directory?: string
   route: string
@@ -63,3 +76,5 @@ export type HostMessage =
   | { type: "context"; context: EditorContext }
   | { type: "newSession"; directory?: string }
   | { type: "theme"; theme: "light" | "dark"; followTheme: boolean }
+  | { type: "prepareReload"; requestID: string }
+  | { type: "review"; requestID: string; sessionID: string }
