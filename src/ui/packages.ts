@@ -1,14 +1,13 @@
 import { createHash, randomUUID } from "node:crypto"
-import { access, mkdir, mkdtemp, readFile, rename, writeFile } from "node:fs/promises"
-import { join, resolve, sep } from "node:path"
+import { access, mkdir, mkdtemp, readFile, rename, rm, stat, writeFile } from "node:fs/promises"
+import { basename, join, resolve, sep } from "node:path"
 import { z } from "zod"
 import { extractUI } from "./archive"
-import { compatible, newer, uiCatalog, uiManifest, uiRelease, UI_INDEX_URL, type UiManifest, type UiRelease } from "./manifest"
+import { compatible, newer, uiArchive, uiManifest, type UiManifest, type UiArchive } from "./manifest"
 
-export type UiBundle = { directory: string; manifest: UiManifest; release?: UiRelease }
+export type UiBundle = { directory: string; manifest: UiManifest; archive?: UiArchive }
 const stateSchema = z.object({
-  lastCheck: z.number().optional(),
-  catalog: z.array(uiRelease).default([]),
+  installed: z.array(uiArchive).default([]),
   lastGood: z.string().optional(),
   previous: z.string().optional(),
   pending: z.string().optional(),
@@ -16,19 +15,16 @@ const stateSchema = z.object({
   failed: z.array(z.string()).default([]),
 })
 type State = z.infer<typeof stateSchema>
-const CHECK_INTERVAL = 6 * 60 * 60 * 1000
 
 export class UiPackages {
   private writing = Promise.resolve()
-  private checking?: Promise<UiBundle | undefined>
-  private readonly installs = new Map<string, Promise<UiBundle>>()
+  private importing = Promise.resolve()
   private builtin?: Promise<UiBundle>
 
   constructor(private readonly options: {
     directory: string
     builtinDirectory: string
     hostProtocol: number
-    indexURL?: string
     log: (message: string) => void
   }) {}
 
@@ -45,21 +41,21 @@ export class UiPackages {
       if (bundle && compatible(bundle.manifest, serviceVersion, this.options.hostProtocol)) return bundle
     }
     if (compatible(builtin.manifest, serviceVersion, this.options.hostProtocol)) return builtin
-    const cached = state.catalog.filter((release) => !state.failed.includes(release.id) && compatible(release, serviceVersion, this.options.hostProtocol)).sort((a, b) => newer(b, a))
-    for (const release of cached) {
-      const bundle = await this.bundle(release.id).catch(() => undefined)
+    const installed = state.installed.filter((archive) => !state.failed.includes(archive.id) && compatible(archive, serviceVersion, this.options.hostProtocol)).sort((a, b) => newer(b, a))
+    for (const archive of installed) {
+      const bundle = await this.bundle(archive.id).catch(() => undefined)
       if (bundle) return bundle
     }
     // service 版本尚未验证时保留已有 UI，不替换正在运行的 service。
-    this.options.log(`No UI compatibility declaration for OpenCode ${serviceVersion ?? "unknown"}; using the last available UI`)
+    this.options.log(`No local UI compatibility declaration for OpenCode ${serviceVersion ?? "unknown"}; using the last available UI`)
     const last = state.lastGood && !state.failed.includes(state.lastGood) ? await this.bundle(state.lastGood).catch(() => undefined) : undefined
     return last ?? builtin
   }
 
-  check(serviceVersion: string | undefined, current: UiBundle, force = false) {
-    if (this.checking) return this.checking
-    this.checking = this.resolveUpdate(serviceVersion, current, force).finally(() => { this.checking = undefined })
-    return this.checking
+  importPackage(file: string, serviceVersion?: string) {
+    const next = this.importing.then(() => this.importLocal(file, serviceVersion))
+    this.importing = next.then(() => {}, () => {})
+    return next
   }
 
   async loaded(bundle: UiBundle) {
@@ -83,8 +79,7 @@ export class UiPackages {
   async rollback(serviceVersion?: string) {
     const state = await this.state()
     const builtin = await this.bundled()
-    const choices = [state.previous, builtin.manifest.id]
-    for (const id of choices) {
+    for (const id of [state.previous, builtin.manifest.id]) {
       if (!id || id === state.lastGood || state.failed.includes(id)) continue
       const bundle = await this.bundle(id).catch(() => undefined)
       if (!bundle || !compatible(bundle.manifest, serviceVersion, this.options.hostProtocol)) continue
@@ -99,63 +94,55 @@ export class UiPackages {
     return state.pending ? this.bundle(state.pending) : undefined
   }
 
-  private async resolveUpdate(serviceVersion: string | undefined, current: UiBundle, force: boolean) {
-    const state = await this.state()
-    if (state.pinned && !force) return undefined
-    const fresh = force || !state.lastCheck || Date.now() - state.lastCheck >= CHECK_INTERVAL
-    const releases = fresh
-      ? uiCatalog.parse(await this.fetchJSON(this.options.indexURL ?? UI_INDEX_URL)).releases
-      : state.catalog
-    if (fresh) await this.update((value) => ({ ...value, lastCheck: Date.now(), catalog: releases, pinned: force ? undefined : value.pinned }))
-    const target = releases.filter((release) =>
-      !state.failed.includes(release.id) &&
-      compatible(release, serviceVersion, this.options.hostProtocol) &&
-      (newer(release, current.manifest) > 0 || !compatible(current.manifest, serviceVersion, this.options.hostProtocol)),
-    ).sort((a, b) => newer(b, a))[0]
-    if (!target) return undefined
-    const bundle = await this.install(target)
-    await this.update((value) => ({ ...value, pending: bundle.manifest.id }))
-    this.options.log(`UI ${target.id} downloaded and verified; it will be used on the next sidebar reload`)
-    return bundle
-  }
-
-  private install(release: UiRelease) {
-    const existing = this.installs.get(release.id)
-    if (existing) return existing
-    const next = this.download(release).finally(() => this.installs.delete(release.id))
-    this.installs.set(release.id, next)
-    return next
-  }
-
-  private async download(release: UiRelease): Promise<UiBundle> {
-    const destination = this.cachePath(release.id)
-    const installed = await this.readBundle(destination).catch(() => undefined)
-    if (installed) {
-      if (installed.release?.sha256 !== release.sha256) throw new Error("A UI package version was republished with different contents")
-      return installed
-    }
+  private async importLocal(file: string, serviceVersion?: string): Promise<UiBundle> {
+    const info = await stat(file)
+    if (!info.isFile() || info.size === 0 || info.size > 128 * 1024 * 1024)
+      throw new Error("请选择不超过 128 MiB 的本地 UI ZIP 文件。")
+    const bytes = await readFile(file)
+    if (bytes.byteLength > 128 * 1024 * 1024) throw new Error("UI ZIP exceeds the installation size limit")
     await mkdir(this.options.directory, { recursive: true })
-    const directory = await mkdtemp(join(this.options.directory, "install-"))
-    const response = await fetch(release.url, { signal: AbortSignal.timeout(120_000) })
-    if (!response.ok) throw new Error(`UI download failed (HTTP ${response.status})`)
-    const bytes = new Uint8Array(await response.arrayBuffer())
-    if (bytes.byteLength !== release.size || createHash("sha256").update(bytes).digest("hex") !== release.sha256)
-      throw new Error("UI package checksum or download size does not match its release")
-    await writeFile(join(directory, "download.zip"), bytes)
-    const content = join(directory, "content")
-    await mkdir(content)
-    await extractUI(bytes, content)
-    const candidate = await this.readBundle(content)
-    if (JSON.stringify(candidate.manifest) !== JSON.stringify(uiManifest.parse(release)))
-      throw new Error("UI archive manifest differs from the update catalog")
-    await writeFile(join(content, "ui-release.json"), JSON.stringify(release) + "\n")
-    await mkdir(resolve(destination, ".."), { recursive: true })
-    await rename(content, destination).catch(async (error: unknown) => {
-      // 多窗口可能同时安装相同不可变包；只复用内容校验一致的已完成安装。
-      const complete = await this.readBundle(destination).catch(() => undefined)
-      if (complete?.release?.sha256 !== release.sha256) throw error
-    })
-    return this.readBundle(destination)
+    const temporary = await mkdtemp(join(this.options.directory, "import-"))
+    const root = resolve(this.options.directory)
+    if (!resolve(temporary).startsWith(root + sep)) throw new Error("Temporary import directory leaves the UI cache")
+    try {
+      const content = join(temporary, "content")
+      const manifest = await extractUI(bytes, content)
+      if (!compatible(manifest, serviceVersion, this.options.hostProtocol))
+        throw new Error(`UI ${manifest.id} 不兼容：需要宿主协议 ${manifest.hostProtocol}，声明的服务范围为 ${manifest.serviceRange}。`)
+      const builtin = await this.bundled()
+      if (manifest.id === builtin.manifest.id)
+        throw new Error("UI 包 ID 与内置版本相同。请执行 ui:upstream 增加修订号后重新构建。")
+      const archive = uiArchive.parse({
+        ...manifest, fileName: basename(file),
+        sha256: createHash("sha256").update(bytes).digest("hex"),
+        size: bytes.byteLength,
+      })
+      const destination = this.cachePath(manifest.id)
+      const installed = await this.readBundle(destination).catch(() => undefined)
+      if (installed && installed.archive?.sha256 !== archive.sha256)
+        throw new Error("已有相同 ID 的 UI 包且内容不同，请增加修订号后重新构建。")
+      if (!installed) {
+        await writeFile(join(content, "ui-install.json"), JSON.stringify(archive) + "\n")
+        await mkdir(resolve(destination, ".."), { recursive: true })
+        await rename(content, destination).catch(async (error: unknown) => {
+          // 多窗口可能导入同一包；只接受已完整安装且校验一致的内容。
+          const complete = await this.readBundle(destination).catch(() => undefined)
+          if (complete?.archive?.sha256 !== archive.sha256) throw error
+        })
+      }
+      const bundle = await this.readBundle(destination)
+      await this.update((state) => ({
+        ...state,
+        installed: [archive, ...state.installed.filter((item) => item.id !== archive.id)],
+        pending: archive.id,
+        pinned: undefined,
+        failed: state.failed.filter((id) => id !== archive.id),
+      }))
+      this.options.log(`Local UI ${manifest.id} imported and verified; it will be used on the next sidebar reload`)
+      return bundle
+    } finally {
+      await rm(temporary, { recursive: true, force: true })
+    }
   }
 
   private cachePath(id: string) {
@@ -174,11 +161,11 @@ export class UiPackages {
     const manifest = uiManifest.parse(JSON.parse(await readFile(join(directory, "ui-manifest.json"), "utf8")))
     if (manifest.hostProtocol !== this.options.hostProtocol) throw new Error("UI package requires a different host protocol")
     await access(join(directory, manifest.entry))
-    const raw = await readFile(join(directory, "ui-release.json"), "utf8").catch((error: unknown) => {
+    const raw = await readFile(join(directory, "ui-install.json"), "utf8").catch((error: unknown) => {
       if (error && typeof error === "object" && "code" in error && error.code === "ENOENT") return undefined
       throw error
     })
-    return { directory, manifest, release: raw ? uiRelease.parse(JSON.parse(raw)) : undefined }
+    return { directory, manifest, archive: raw ? uiArchive.parse(JSON.parse(raw)) : undefined }
   }
 
   private async state(): Promise<State> {
@@ -186,24 +173,18 @@ export class UiPackages {
       if (error && typeof error === "object" && "code" in error && error.code === "ENOENT") return undefined
       throw error
     })
+    // 0.2.0 的 catalog/lastCheck 等线上字段不再使用，其余选包和回退记录仍可读取。
     return raw ? stateSchema.parse(JSON.parse(raw)) : stateSchema.parse({})
   }
 
   private update(change: (state: State) => State) {
     const next = this.writing.then(async () => {
-      const state = change(await this.state())
       await mkdir(this.options.directory, { recursive: true })
       const file = join(this.options.directory, `state-${randomUUID()}.json`)
-      await writeFile(file, JSON.stringify(state) + "\n", "utf8")
+      await writeFile(file, JSON.stringify(change(await this.state())) + "\n", "utf8")
       await rename(file, join(this.options.directory, "state.json"))
     })
     this.writing = next.catch(() => {})
     return next
-  }
-
-  private async fetchJSON(url: string) {
-    const response = await fetch(url, { signal: AbortSignal.timeout(15_000), headers: { Accept: "application/json" } })
-    if (!response.ok) throw new Error(`UI update catalog unavailable (HTTP ${response.status})`)
-    return response.json()
   }
 }

@@ -86,7 +86,7 @@ async function command(name: string): Promise<CommandResult> {
   console.log("VS Code command:", name)
   const id = randomUUID()
   const temporary = join(fixture.project, "command-" + id + ".json")
-  await writeFile(temporary, JSON.stringify({ id, command: name }))
+  await writeFile(temporary, JSON.stringify({ id, command: name, uiPath: distribution.zip }))
   await rename(temporary, join(fixture.project, "vscode-command.json"))
   const result = join(fixture.project, "vscode-command-result.json")
   await expect.poll(async () => {
@@ -159,15 +159,14 @@ try {
     directory: join(directory, "User/globalStorage/opencode-local.opencode-sidebar/ui"),
     builtinDirectory: join(root, "dist/webview"),
     hostProtocol: HOST_PROTOCOL,
-    indexURL: distribution.server.url.origin + "/stable.json",
     log: console.log,
   })
   await expect.poll(async () => {
     const state = Bun.file(join(directory, "User/globalStorage/opencode-local.opencode-sidebar/ui/state.json"))
     return await state.exists() ? (await state.json() as { lastGood?: string }).lastGood : undefined
   }).toBe(distribution.original.id)
-  const next = await packages.check(fixture.endpoint.version, await packages.bundled(), true)
-  assert.equal(next?.manifest.id, distribution.updated.id)
+  await command("import")
+  assert.equal((await packages.pending())?.manifest.id, distribution.updated.id)
   await frame()!.locator('[contenteditable="true"]').fill("真实 VS Code 更新前草稿")
   agentsReady = false
   await command("apply")
@@ -196,7 +195,7 @@ try {
   await page.screenshot({ path: join(fixture.directory, "vscode-sent.png") })
   await Bun.write(join(root, "artifacts/vscode-smoke.json"), JSON.stringify({
     directory: fixture.directory,
-    version: "0.2.0",
+    version: "0.3.0",
     editorDecodedGBK: true,
     unsavedSelection: true,
     fileJump: true,
@@ -208,7 +207,7 @@ try {
     uiRolledBack: distribution.original.id,
     draftPreserved: true,
   }, null, 2))
-  console.log("Real VS Code verified GBK/selection sends, file links, native diff, UI update and rollback with preserved drafts")
+  console.log("Real VS Code verified GBK/selection sends, file links, native diff, local UI import, application and rollback with preserved drafts")
 } finally {
   await browser.close()
   child.kill()

@@ -1,6 +1,6 @@
 # COST-001 — GitHub Actions 零支出整改计划
 
-状态：原降低 Actions 存储方案已被用户暂停，改为停用全部 Actions、撤下托管附件、只保留源码。远端清理已完成；本地 UI ZIP 导入改造见 SOURCE-ONLY.md，等待实施确认。
+状态：原降低 Actions 存储方案已被用户暂停，改为停用全部 Actions、撤下托管附件、只保留源码。远端清理已完成；0.3.0 本地 UI ZIP 导入已实现，见 SOURCE-ONLY.md。
 
 ## 现行规则与已核对状态
 
@@ -60,3 +60,5 @@ GitHub 公开 REST budgets 文档目前列出的预算管理端点面向组织�
 - Actions artifacts 与 cache 均回读为零，旧 stable.json 更新清单清空，避免旧客户端继续下载不存在的资产。
 - 用户回复确认 Actions 产品 $0 预算与 Stop usage when budget limit is reached 已设置；这是用户确认，个人预算未通过 API 回读。
 - 源码模式与本地导入计划见 [SOURCE-ONLY.md](SOURCE-ONLY.md)。当前远端产物已撤下，现有安装的 0.2.0 应关闭 uiAutoUpdate。
+
+0.3.0 已移除源码中的 Actions 定义及在线下载／发布入口。本机编译与 ZIP 导入替代远端构建和资产分发；后续源码提交不执行 Actions，也不上传 Release 产物。

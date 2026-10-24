@@ -1,5 +1,15 @@
 # Changelog
 
+## 0.3.0 — 2026-10-24
+
+- feat(ui): import locally built UI ZIPs with per-file integrity and host/service compatibility checks.
+- feat(ui): retain cached application, rollback and draft preservation without an online update catalog.
+- chore(build): prepare an explicit pinned OpenCode version locally, with no GitHub token, PR, commit or push.
+- chore(repo): remove retired Actions workflows and hosted publishing scripts; distribute source only.
+- test(ui): verify local imports, corrupted files, legacy state, actual sends and VS Code commands.
+
+使用者本地构建 VSIX/UI ZIP。旧 Release 文字保留作历史，附件已撤下。需用户在日常项目自测。
+
 ## 0.2.0 — 2026-10-24
 
 - feat(ui): separate official UI/Client SDK packages from the stable VS Code Host.

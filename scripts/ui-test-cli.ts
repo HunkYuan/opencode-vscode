@@ -32,8 +32,4 @@ if (process.platform !== "win32") await chmod(executable, 0o755)
 const result = await promisify(execFile)(executable, ["--version"], { windowsHide: true, timeout: 30_000 })
 assert.ok(result.stdout.includes(version), "downloaded CLI does not match its pinned version")
 await Bun.write(join(root, "artifacts/test-cli-path.txt"), executable)
-if (process.env.GITHUB_ENV) {
-  const previous = await Bun.file(process.env.GITHUB_ENV).text().catch(() => "")
-  await Bun.write(process.env.GITHUB_ENV, previous + "\nOPENCODE_TEST_CLI_PATH=" + executable + "\n")
-}
 console.log(`Prepared official OpenCode ${version} CLI: ${executable}`)

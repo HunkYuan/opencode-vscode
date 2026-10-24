@@ -1,5 +1,7 @@
 # OpenCode VS Code 插件实施计划
 
+> 本文保留最初实现计划。当前采用源码分发与本地 UI ZIP 导入，见 [SOURCE-ONLY.md](SOURCE-ONLY.md)。
+
 结论：复用官方 Solid UI，仅新增 VS Code 启动入口与宿主适配。
 
 - 插件目录：E:\\opencode-vscode；官方源码：E:\\opencode。

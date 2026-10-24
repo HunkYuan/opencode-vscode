@@ -2,7 +2,7 @@
   "name": "opencode-sidebar",
   "displayName": "OpenCode Sidebar",
   "description": "Community VS Code extension embedding the OpenCode UI and connecting to your shared local service.",
-  "version": "0.2.0",
+  "version": "0.3.0",
   "publisher": "opencode-local",
   "private": true,
   "type": "module",
@@ -78,8 +78,8 @@
         "title": "OpenCode: Show Logs"
       },
       {
-        "title": "OpenCode: Check UI Updates",
-        "command": "opencodeSidebar.checkUIUpdates"
+        "title": "OpenCode: Import UI Package",
+        "command": "opencodeSidebar.importUIPackage"
       },
       {
         "title": "OpenCode: Apply UI Update",
@@ -151,11 +151,6 @@
           "type": "boolean",
           "default": true,
           "description": "Follow the VS Code light or dark theme."
-        },
-        "opencodeSidebar.uiAutoUpdate": {
-          "description": "Automatically download compatible UI packages and use them when the sidebar is next reloaded.",
-          "default": true,
-          "type": "boolean"
         }
       }
     }
@@ -251,8 +246,7 @@
     "build:host": "bun scripts/build-host.ts",
     "build:ui": "bun scripts/build-ui.ts && bun scripts/ui-package.ts",
     "test:ui-update": "bun scripts/ui-update-smoke.ts",
-    "ui:upstream": "bun scripts/ui-upstream.ts prepare",
-    "ui:publish": "bun scripts/ui-publish.ts"
+    "ui:upstream": "bun scripts/ui-upstream.ts"
   },
   "devDependencies": {
     "@opencode/app": "workspace:*",

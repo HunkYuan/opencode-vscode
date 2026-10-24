@@ -9,6 +9,7 @@ import { createTransport } from "./transport"
 import { Storage } from "./storage"
 import { activeDirectory, openFile, createReview } from "./editor"
 import { UiPackages, type UiBundle } from "./ui/packages"
+import { compatible } from "./ui/manifest"
 
 export class Sidebar implements WebviewViewProvider {
   private view?: WebviewView
@@ -68,7 +69,6 @@ export class Sidebar implements WebviewViewProvider {
     }, undefined, this.context.subscriptions)
     await this.reconnect()
     await this.load(await this.packages.select(this.state.serviceVersion))
-    this.autoUpdate()
     view.onDidDispose(() => {
       this.stopBoot()
       this.view = undefined
@@ -85,7 +85,6 @@ export class Sidebar implements WebviewViewProvider {
     await commands.executeCommand("workbench.view.extension.opencodeSidebar")
     await commands.executeCommand("opencodeSidebar.chat.focus")
     this.view?.show(false)
-    if (this.initialized) this.autoUpdate()
   }
 
   async attach(context: EditorContext) {
@@ -129,23 +128,22 @@ export class Sidebar implements WebviewViewProvider {
     await this.ask({ type: "review", sessionID: this.sessionID })
   }
 
-  async checkUIUpdates(force = true) {
-    const current = this.bundle ?? await this.packages.select(this.state.serviceVersion)
-    const next = await this.packages.check(this.state.serviceVersion, current, force)
-    if (force) await window.showInformationMessage(next
-      ? `UI ${next.manifest.id} 已下载，下次重载自动使用；也可执行 Apply UI Update。`
-      : "当前没有可用的兼容 UI 更新。")
-    return next?.manifest.id
-  }
-
-  private autoUpdate() {
-    if (workspace.getConfiguration("opencodeSidebar").get("uiAutoUpdate", true) && this.state.status === "ready")
-      void this.checkUIUpdates(false).catch((error: unknown) => this.log.warn(`UI update check failed: ${error instanceof Error ? error.message : String(error)}`))
+  async importUIPackage(uri?: Uri) {
+    const file = uri ?? (await window.showOpenDialog({
+      canSelectFiles: true, canSelectFolders: false, canSelectMany: false,
+      title: "导入本地 OpenCode UI 包", filters: { "OpenCode UI ZIP": ["zip"] },
+    }))?.[0]
+    if (!file) return
+    if (file.scheme !== "file") throw new Error("请选择本地文件系统中的 UI ZIP。")
+    const imported = await this.packages.importPackage(file.fsPath, this.service.current()?.version ?? this.state.serviceVersion)
+    void window.showInformationMessage(`UI ${imported.manifest.id} 已导入，下次重载使用；也可执行 Apply UI Update。`)
+    return imported.manifest.id
   }
 
   async applyUIUpdate() {
     const next = await this.packages.pending()
     if (!next) { await window.showInformationMessage("当前没有待应用的 UI 更新。"); return }
+    if (!compatible(next.manifest, this.state.serviceVersion, HOST_PROTOCOL)) throw new Error("待应用 UI 与当前 service 不兼容，请重新导入匹配版本。")
     if (!await this.prepareReload()) return
     await this.load(next)
   }
@@ -183,7 +181,7 @@ export class Sidebar implements WebviewViewProvider {
     const directory = Uri.file(bundle.directory)
     this.view.webview.options = { enableScripts: true, localResourceRoots: previous ? [directory, Uri.file(previous.directory)] : [directory] }
     this.view.webview.html = await this.html(directory, bundle.manifest.entry)
-    // uiReady 在官方界面挂载后发出；下载包未完成握手时只回退 UI，不动共享 service。
+    // uiReady 在官方界面挂载后发出；导入包未完成握手时只回退 UI，不动共享 service。
     this.boot = setTimeout(() => { void this.bootFailed(bundle).catch((error: unknown) => this.log.error(String(error))) }, 30_000)
     this.log.info(`Loading UI package ${bundle.manifest.id}`)
   }
@@ -275,7 +273,6 @@ export class Sidebar implements WebviewViewProvider {
         this.flush()
         this.send({ type: "service", service: this.state })
         this.theme()
-        this.autoUpdate()
         return
       }
       case "hostResult": {

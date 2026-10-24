@@ -1,46 +1,43 @@
-# SOURCE-001 — 源码分发与本地 UI 构建计划
+# SOURCE-001 — 源码分发与本地 UI 包
 
-状态：用户要求暂停原自动发布方案，并确认停用全部 Actions、由助手清理 Release 附件。远端清理已完成；插件本地包导入改造尚未开始。
+结论：GitHub 提供源码和文档，使用者在本机构建 VSIX 或 UI ZIP。插件从本地导入 ZIP，保留 Host/UI 边界、共享 service、草稿保存和回退。
 
-## 已执行的范围
+状态：本地导入实现与开发运行验证完成，正在打包验证。日常项目验收待用户完成。
 
-| 项目 | 结果 |
+## 分发与费用状态
+
+| 项目 | 状态 |
 |---|---|
-| 仓库 Actions | 仓库级 enabled=false，四个 workflow 均 disabled_manually |
-| 定时上游监测与自动发布 | 已停用 |
-| Release 附件 | 五个 Release 的十二个附件全部删除 |
-| Actions artifacts | 二十八份已完成运行的产物全部删除，释放 1,137,744,414 bytes |
-| Actions cache | 两项缓存全部删除，释放 74,665,036 bytes |
-| 自动下载清单 | ui-updates 分支 stable.json 的 releases 清空 |
-| 源码、标签、历史 | 保留 |
-| Release 文字记录 | 保留，作为历史记录，不再提供安装包 |
-| 本机文件与共享 service | 未删除本机 VSIX/UI 包，未停止或更换 service |
+| 仓库 Actions | enabled=false；源码中的四个 workflow 已移除 |
+| 定时监测、PR 自动合并和自动发布 | 已移除 |
+| Release 附件 | 原十二个附件已删除；不再上传新附件 |
+| Actions 产物与缓存 | 原二十八份产物、两项缓存已删除 |
+| 在线 UI 清单 | 已清空，插件不再读取 |
+| 源码、标签、历史 Release 文字 | 保留 |
+| 本机旧安装包、数据和用户 service | 保留 |
 
-清理后的 Actions artifact 和 cache 库存均为零。远端清理证据位于本机 artifacts/publish/source-only-after.json。
+用户确认账号 Actions `$0` 硬预算及停止选项已设置；该确认不等同于个人 API 回读。删除存储不撤销已累计的历史计量。当前更新流程无需 GitHub token。
 
-用户已确认个人账号设置 Actions 产品 $0 预算，并启用 Stop usage when budget limit is reached。该确认来自用户回复，未通过个人账号 API 回读。删除远端存储只减少后续占用，不追溯撤销已经累计的历史计量。
-
-## 目标
-
-GitHub 提供源码和文档，不执行 Actions，不提供 VSIX/UI ZIP 下载，也不替用户自动合并上游更新。使用者在自己的电脑编译插件和 UI 包。
-
-保留已有的官方组件、Host 协议、service 发现与启动、编辑器快照、原生 diff、工作区存储和本地回退机制。
+## 结构
 
 ```mermaid
 flowchart LR
-    Repo[GitHub 源码] --> Build[本机构建]
-    Official[官方固定源码] --> Build
+    Repo[GitHub 源码] --> Build[本地固定版本构建]
+    Official[官方源码 commit] --> Build
     Build --> VSIX[本地 VSIX]
     Build --> ZIP[本地 UI ZIP]
-    ZIP --> Import[VS Code 导入 UI 包]
-    Import --> UI[本地 UI 缓存]
-    UI <-->|宿主协议 v1| Host[扩展壳]
-    UI <-->|Host 鉴权转发| Service[本机共享 service]
+    ZIP --> Import[Import UI Package]
+    Import --> Cache[本地 UI 缓存]
+    Cache <-->|宿主协议 v1| Host[VS Code Host]
+    Cache <-->|SDK / Host 鉴权转发| Service[本机共享 service]
+    Host --> Editor[编辑器 / 原生 diff / 工作区存储]
 ```
 
-## 现有源码已支持的构建流程
+Host 不运行 OpenCode SDK；UI 包同时包含官方组件、Client SDK、宿主适配和资源。版本变化集中到本地包构建，协议不兼容时拒绝导入。workspaces 的 tab、草稿和附件键不随包版本改变。
 
-完整安装包目前可以本地构建：
+## 构建流程
+
+首次安装：
 
 ```sh
 git clone https://github.com/HunkYuan/opencode-vscode.git
@@ -52,47 +49,70 @@ bun test ./test
 bun run package
 ```
 
-VSIX 输出到仓库根目录，用户通过 Install from VSIX 安装。运行时不需要 Bun 或源码目录。
+VSIX 位于仓库根目录。安装后自带该次构建的 UI，运行时不需要构建工具。
 
-单独构建 UI：
+准备更新：
 
 ```sh
+bun run ui:upstream 2.1.4
+bun run check
+bun test ./test
 bun run build:ui
 ```
 
-输出到 artifacts/ui/。现有 ZIP 仍附带原在线发布用 release.json，现有插件没有本地 ZIP 导入命令；下面的改造才会实现直接导入。当前安装的 0.2.0 应将 opencodeSidebar.uiAutoUpdate 设为 false，避免访问已退役的在线清单。源码改造完成前，不把在线更新功能描述为本地导入功能。
+可传入只读的本地 Git 源码：
 
-## 最小改造与文件清单
+```sh
+bun run ui:upstream 2.1.4 ../opencode
+```
 
-| 文件 | 改动及理由 |
+默认读取官方不可变 tag，固定 commit；本地来源从 HEAD 和 package.json 确认 commit／版本。命令只更新插件工作目录的来源声明、依赖与锁文件，不创建 Git 提交、分支、PR 或远端推送。同一版本再次准备增加修订号，不同版本从修订 1 开始。上游接口或组件结构变化仍可能需要维护适配。
+
+## ZIP 与完整性
+
+`artifacts/ui/` 输出 UI ZIP、`ui-package.json` 和 `SHA256SUMS.txt`，包含：
+
+| 内容 | 用途 |
 |---|---|
-| .github/workflows/ci.yml、ui-upstream.yml、ui-release.yml、ui-validation.yml | 删除已退役的 CI／定时／发布定义；用户已选择停用全部 Actions，源码也不再声明这些任务 |
-| src/ui/manifest.ts | 去掉默认 GitHub 更新地址；保留本地包声明、协议与兼容范围校验 |
-| src/ui/packages.ts | 将下载清单／联网安装改为读取本地 ZIP，校验后存入现有缓存，保留应用与回退 |
-| src/sidebar.ts、src/extension.ts、package.json | 增加 Import UI Package 命令与文件选择，取消自动更新与 Check UI Updates；保留 Apply UI Update、Roll Back UI |
-| scripts/ui-package.ts | 本地 ZIP 和 checksum 声明不包含托管 Release 地址，产物继续放在 artifacts/ui |
-| scripts/ui-upstream.ts | 将自动 GitHub PR 流程改为显式的本地固定版本准备命令；只修改插件目录内的来源声明和依赖 |
-| scripts/ui-publish.ts、scripts/github.ts | 删除只服务于远端发布／PR 的旧入口，避免继续要求 GitHub token |
-| scripts/build.ts、build-host.ts、build-ui.ts、setup.ts | 尽量沿用现有构建逻辑；只调整与本地包契约相关的调用 |
-| test/ui-packages.test.ts、scripts/ui-update-fixture.ts、ui-update-smoke.ts、vscode-smoke.ts | 改为验证本地 ZIP 导入、兼容检查、损坏包拒绝、草稿保存、应用与回退 |
-| README.md、CHANGELOG.md、docs/UI-PACKAGES.md、docs/VALIDATION.md、docs/ACTIONS-COST.md、docs/WORKLOG.md | 说明源码构建与本地导入，撤下在线下载及自动更新指引 |
+| `ui-manifest.json` | 包 ID、修订、官方版本／commit、宿主协议、service 范围和入口 |
+| `ui-integrity.json` | 包内每个文件的 SHA256，与实际文件集合逐项核对 |
+| 官方 UI／SDK／资源 | 同次编译，保持版本配套 |
+| LICENSE／第三方许可 | 本地分发所需许可 |
+| 外部 `ui-package.json` | ZIP 文件名、SHA256、大小及插件源码 commit |
 
-删除远端附件已经执行；表中的源码删除与功能变化需在实施计划确认后进行。原 0.2.0 Release/tag 的历史源码和文档不重写。
+ZIP 不包含在线 Release 地址。导入仅接受本地文件；完整性清单检查损坏与缺失文件，来源信任由选择包的使用者负责。旧 0.2.0 ZIP 不含该清单，需重新构建。
 
-## 使用体验
+只执行 `build:ui` 会复用当前包 ID；修改内容时先执行 `ui:upstream` 增加修订。相同 ID 的不同内容、内置同 ID、协议不匹配、service 不兼容、异常路径和缺失资源均被拒绝。
 
-1. 首次使用：本机构建 VSIX，安装后自带同次构建的 UI。
-2. OpenCode 升级后：按明确版本准备官方源码并本地构建 UI ZIP，兼容性需本机自测。
-3. 在 VS Code 执行 Import UI Package，选择 ZIP；插件校验并缓存它。
-4. 下次打开侧栏使用本地新包，或在空闲时执行 Apply UI Update；应用前保存草稿。
-5. 有问题执行 Roll Back UI，回到上一份可用本地包。
+## 导入、应用与回退
 
-该方式省去 GitHub 运行和存储开销，代价是上游版本准备、编译和自测由使用者承担。普通使用不需要 GitHub token。
+1. 执行 **OpenCode: Import UI Package**，选择本地 ZIP。
+2. 先校验全部文件、协议与当前 service 范围，再放入 `globalStorageUri/ui/packages/<包 ID>`。
+3. 导入只更新待应用状态，已打开聊天继续运行原包。正常重载时使用新包。
+4. **Apply UI Update** 主动重载时先 flush 草稿和 Blob；正在工作则延后。
+5. **Roll Back UI** 使用上一份可用兼容包。再次导入新包会取消回退选择。
+6. 新 UI 未完成启动握手时标记失败并回退；共享 service 保持运行。
 
-## 验证
+旧 0.2.0 的缓存选包和回退字段继续读取，catalog 和 lastCheck 等在线字段不再使用。无需清空旧会话、草稿或附件。
 
-- 本地 check、契约测试、UI ZIP 与 VSIX 构建。
-- 本地 UI ZIP 的导入、损坏校验、兼容检查、应用与回退。
-- 真实 VS Code 下的 GBK／未保存选区、文件定位、原生 diff 和草稿重载。
-- GitHub 仓库 Actions disabled，源码中没有 schedule 或远端发布任务。
-- 不上传新 Release 产物，不执行远端 CI。最终验收仍由用户在日常项目自测。
+## 已修改的位置
+
+| 位置 | 内容 |
+|---|---|
+| `.github/workflows/*` | 删除四份已退役 Actions 定义 |
+| `src/ui/` | 本地清单、完整性校验、缓存导入、应用选择与回退 |
+| `src/sidebar.ts`、`src/extension.ts`、`package.json` | Import UI Package 入口；移除自动更新配置与 Check UI Updates |
+| `scripts/ui-package.ts` | 无在线地址的 ZIP、声明和 SHA256 构建 |
+| `scripts/ui-upstream.ts` | 显式本地版本准备，替代原 GitHub 自动 PR |
+| `scripts/ui-publish.ts`、`scripts/github.ts` | 删除仅用于远端发布的脚本 |
+| 包测试与 smoke | 本地导入、损坏包、兼容、重载草稿、发送、diff、应用和回退 |
+| README、Changelog 与记录 | 当前使用流程及退役历史 |
+
+## 验证与使用范围
+
+- `bun run check` 与十四项单测通过。
+- 固定 OpenCode 2.1.4 的本地来源准备、依赖安装与 UI ZIP 构建通过。
+- 浏览器验证本地导入后重载、GBK 发送、模型收到完整内容、diff 查询、回退及草稿。
+- 真实 VS Code 1.94 验证 Import UI Package、应用／回退后再次发送、GBK／未保存选区、文件定位和原生 diff。
+- 测试使用隔离 XDG 与独立端口，没有停止或替换用户 service。
+- GitHub 保留源码，不执行 CI 或上传构建产物。Windows 日常项目仍需用户安装自测。

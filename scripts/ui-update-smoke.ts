@@ -21,7 +21,7 @@ const original = distribution.original
 const updated = distribution.updated
 const source = distribution.server
 let active: UiBundle = { directory: originalDirectory, manifest: original }
-const packages = new UiPackages({ directory: join(fixture.directory, "ui-cache"), builtinDirectory: originalDirectory, hostProtocol: HOST_PROTOCOL, indexURL: source.url.origin + "/stable.json", log: console.log })
+const packages = new UiPackages({ directory: join(fixture.directory, "ui-cache"), builtinDirectory: originalDirectory, hostProtocol: HOST_PROTOCOL, log: console.log })
 const transport = await createTransport({ resolve: async () => fixture.endpoint, log: console.warn })
 transport.setOrigin(source.url.origin)
 const state = new Map<string, unknown>()
@@ -82,11 +82,11 @@ try {
   await page.evaluate((context) => window.dispatchEvent(new MessageEvent("message", { data: { type: "context", context } })), context)
   await page.getByText("saved file.cpp", { exact: false }).first().waitFor()
   await page.locator('[contenteditable="true"]').fill("UI 更新前的 GBK 草稿")
-  const next = await packages.check(fixture.endpoint.version, active, true)
+  const next = await packages.importPackage(distribution.zip, fixture.endpoint.version)
   assert.equal(next?.manifest.id, updated.id)
   assert.equal(active.manifest.id, original.id)
   await prepare()
-  active = await new UiPackages({ directory: join(fixture.directory, "ui-cache"), builtinDirectory: originalDirectory, hostProtocol: HOST_PROTOCOL, indexURL: source.url.origin + "/stable.json", log: () => {} }).select(fixture.endpoint.version)
+  active = await new UiPackages({ directory: join(fixture.directory, "ui-cache"), builtinDirectory: originalDirectory, hostProtocol: HOST_PROTOCOL, log: () => {} }).select(fixture.endpoint.version)
   distribution.use(active.directory)
   loaded = ""
   const agents = page.waitForResponse((response) => {
@@ -123,8 +123,8 @@ try {
   await expect(page.locator('[contenteditable="true"]')).toHaveText("回退后保留的草稿")
   assert.equal((await packages.select(fixture.endpoint.version)).manifest.id, original.id)
   assert.deepEqual(errors, [])
-  await Bun.write(join(root, "artifacts/ui-update-smoke.json"), JSON.stringify({ downloaded: updated.id, applied: true, draftPreserved: true, gbkSent: true, modelReceived: true, sdkReview: true, rolledBack: original.id, directory: fixture.directory }, null, 2))
-  console.log("Independent UI download, verified reload, draft preservation, GBK send, SDK review and rollback passed")
+  await Bun.write(join(root, "artifacts/ui-update-smoke.json"), JSON.stringify({ imported: updated.id, applied: true, draftPreserved: true, gbkSent: true, modelReceived: true, sdkReview: true, rolledBack: original.id, directory: fixture.directory }, null, 2))
+  console.log("Local UI import, verified reload, draft preservation, GBK send, SDK review and rollback passed")
 } catch (error) {
   console.error("UI update failure:", (await page.locator("body").innerText()).slice(-2200))
   await page.screenshot({ path: join(fixture.directory, "ui-update-failure.png") })

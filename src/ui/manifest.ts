@@ -1,8 +1,6 @@
 import { z } from "zod"
 import semver from "semver"
 
-export const UI_INDEX_URL = "https://raw.githubusercontent.com/HunkYuan/opencode-vscode/ui-updates/stable.json"
-
 export const packagePath = z.string().min(1).refine((path) =>
   !path.startsWith("/") && !path.includes("\\") && !path.includes(":") &&
   path.split("/").every((part) => part.length > 0 && part !== "." && part !== ".."),
@@ -21,17 +19,15 @@ export const uiManifest = z.object({
 })
 export type UiManifest = z.infer<typeof uiManifest>
 
-export const uiRelease = uiManifest.extend({
-  url: z.string().url().refine((value) => {
-    const url = new URL(value)
-    return url.protocol === "https:" || (url.protocol === "http:" && ["127.0.0.1", "localhost", "[::1]"].includes(url.hostname))
-  }, "UI packages require HTTPS or a local distribution server"),
-  sha256: z.string().regex(/^[a-f0-9]{64}$/),
+const sha256 = z.string().regex(/^[a-f0-9]{64}$/)
+export const uiArchive = uiManifest.extend({
+  fileName: packagePath,
+  sha256,
   size: z.number().int().positive().max(128 * 1024 * 1024),
   sourceCommit: z.string().regex(/^[a-f0-9]{40}$/).optional(),
 })
-export type UiRelease = z.infer<typeof uiRelease>
-export const uiCatalog = z.object({ schemaVersion: z.literal(1), releases: z.array(uiRelease).max(200) })
+export type UiArchive = z.infer<typeof uiArchive>
+export const uiIntegrity = z.object({ schemaVersion: z.literal(1), files: z.record(packagePath, sha256) })
 
 export function compatible(manifest: UiManifest, serviceVersion: string | undefined, hostProtocol: number) {
   return manifest.hostProtocol === hostProtocol &&

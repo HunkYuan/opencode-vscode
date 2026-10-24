@@ -1,4 +1,4 @@
-import { window, commands, type ExtensionContext } from "vscode"
+import { window, commands, type Uri, type ExtensionContext } from "vscode"
 import { Sidebar } from "./sidebar"
 import { captureContext } from "./editor"
 
@@ -15,12 +15,12 @@ export function activate(context: ExtensionContext) {
     reconnect: () => sidebar.reconnect(),
     enableService: () => sidebar.enableService(),
     logs: () => output.show(),
-    checkUIUpdates: () => sidebar.checkUIUpdates(),
+    importUIPackage: (uri?: Uri) => sidebar.importUIPackage(uri),
     applyUIUpdate: () => sidebar.applyUIUpdate(),
     rollbackUI: () => sidebar.rollbackUI(),
   }
-  Object.entries(actions).forEach(([name, action]) => context.subscriptions.push(commands.registerCommand("opencodeSidebar." + name, () =>
-    Promise.resolve().then(async () => { await action() }).catch((error: unknown) => {
+  Object.entries(actions).forEach(([name, action]) => context.subscriptions.push(commands.registerCommand("opencodeSidebar." + name, (uri?: Uri) =>
+    Promise.resolve().then(async () => { await action(uri) }).catch((error: unknown) => {
       const message = error instanceof Error ? error.message : "OpenCode operation failed"
       output.error(message)
       void window.showErrorMessage(message)

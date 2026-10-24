@@ -31,7 +31,7 @@ export async function run() {
   const watcher = watch(root, (_event, name) => {
     if (name !== "vscode-command.json") return
     input = input.then(async () => {
-      const request = JSON.parse(await readFile(join(root, "vscode-command.json"), "utf8")) as { id: string; command: string }
+      const request = JSON.parse(await readFile(join(root, "vscode-command.json"), "utf8")) as { id: string; command: string; uiPath?: string }
       if (request.id === completed) return
       completed = request.id
       const perform = async () => {
@@ -55,6 +55,11 @@ export async function run() {
           assert.ok(diff, "native diff editor must open the requested file")
           const documents = workspace.textDocuments.filter((document) => document.uri.scheme === "opencode-review")
           return { diff: true, contents: documents.map((document) => document.getText()) }
+        }
+        if (request.command === "import") {
+          assert.ok(request.uiPath)
+          await commands.executeCommand("opencodeSidebar.importUIPackage", Uri.file(request.uiPath))
+          return { imported: true }
         }
         if (request.command === "apply") { await commands.executeCommand("opencodeSidebar.applyUIUpdate"); return { applied: true } }
         if (request.command === "rollback") { await commands.executeCommand("opencodeSidebar.rollbackUI"); return { rolledBack: true } }

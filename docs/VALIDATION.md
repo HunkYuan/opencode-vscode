@@ -1,5 +1,7 @@
 # 验证记录
 
+> 当前版本 0.3.0 使用本地构建／导入，GitHub Actions 已停用，旧 Release 附件已撤下。下方历史 CI 与下载记录不代表当前仍提供托管产物。
+
 | 验证 | 结果 | 证据 |
 |---|---|---|
 | 官方 UI 构建 | 通过 | dist/webview；来源 dist/upstream.json |
@@ -89,3 +91,22 @@ GitHub 自动监测和公开发布将在服务器端验证后记录。日常项�
 交付 VSIX 使用 Host 提交 57847de593f05d8b1fbd663d883b561ad06b7582 与公开 UI 提交 0cc5a377c4f79b79c6cbffefa04e4f09887af562，从全新暂存目录组装；33,600,292 bytes，2827 entries，无测试或临时数据。SHA256 8e4e69306370fccb4aaa18ce6ee2d0c87643e7325a2536294940a11f2d418855。
 
 [下载 0.2.0](https://github.com/HunkYuan/opencode-vscode/releases/download/v0.2.0/opencode-sidebar-0.2.0.vsix)；首次安装后执行 Reload Window，后续正常兼容 UI 更新自动下载，下一次正常重载使用。日常项目仍需用户自测。
+
+## 0.3.0 本地 UI 导入验证
+
+| 项目 | 结果 | 证据 |
+|---|---|---|
+| lint、Host/Webview 类型检查 | 通过 | bun run check |
+| 本地包及已有契约测试 | 14 pass / 0 fail | bun test ./test |
+| 指定版本本地准备 | 2.1.4 固定 tag/commit，修订增加，依赖安装通过 | bun run ui:upstream 2.1.4 |
+| ZIP 每文件校验、协议／service 检查 | 通过 | test/ui-packages.test.ts |
+| 损坏／缺少文件／旧 ZIP／相同 ID 拒绝 | 通过，原包保持可用 | test/ui-packages.test.ts |
+| 读取旧在线状态，不联系 catalog | 通过 | test/ui-packages.test.ts |
+| 完整 UI 本地导入、重载、草稿、回退 | 通过 | artifacts/ui-update-smoke.json |
+| GBK、UTF-8、未保存内容、选区、空文件实际发送 | 六类通过 | artifacts/attachment-smoke.json |
+| Markdown、权限实际回复与表单 | 通过，隔离 service | scripts/session-smoke.ts |
+| 真实 VS Code 1.94 Import UI Package | 通过 | artifacts/vscode-smoke.json |
+| 文件定位／原生 diff／未保存选区 | 通过 | artifacts/vscode-smoke.json |
+| 本地包应用和回退后再次发送，草稿保留 | 通过 | artifacts/vscode-smoke.json |
+
+全部验证在本机进行，没有启用 GitHub Actions 或上传新产物。用户 service 保持运行；日常项目验收仍需用户自测。

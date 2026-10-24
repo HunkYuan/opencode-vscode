@@ -127,3 +127,14 @@
 - ui-updates/stable.json 清空；Release 附件数、artifact 和 cache 库存回读均为零。源码、标签、Release 文字与历史保留，本机产物和用户 service 未动。
 - 用户确认已设置个人 Actions $0 硬预算并启用停止；该确认不是 API 回读。历史已经累计的用量不会因清理而撤销。
 - 插件目前仍是已发布过的 0.2.0 运行逻辑，本轮未改实现；docs/SOURCE-ONLY.md 列出本地 ZIP 导入、取消线上更新、删除旧 workflow 与发布脚本的计划，等待开工。
+
+## SOURCE-001 — 本地 UI ZIP 导入实施 — 2026-10-24
+
+- 用户确认计划并授权开工；删除四份已退役 workflow、ui-publish.ts、github.ts，保留本地构建／测试与官方业务组件。
+- 0.3.0 增加 Import UI Package，本地 ZIP 逐文件 SHA256／路径／文件集合校验，协议与 service 兼容后缓存；保留应用／回退与草稿 flush。
+- 移除在线清单、自动检查、在线下载设置和 Check UI Updates；旧缓存的 lastGood／previous 等仍可读取，在线字段不再使用。
+- ui:upstream 改为显式本地版本命令，Git tag 或只读 Git 来源固定 commit；同步依赖、锁文件与修订，不创建提交／PR／远端推送。
+- ZIP 输出 ui-package.json 与 SHA256SUMS.txt，不含 Release 下载地址；旧 ZIP 缺少完整性清单会拒绝，要求重新构建。
+- 本地准备 2.1.4、构建 Host/UI、check、14 项单测通过；浏览器本地导入／重载／GBK 发送／diff／回退，以及真实 VS Code 命令和应用后再次发送通过。
+- 六类编辑器附件、Markdown／权限／表单联调通过，均使用隔离 service；未替换或停止用户已有 service。
+- 更新 README、SOURCE-ONLY、Changelog 和历史文档状态；保留所有源码标签和提交历史。下一步本地 VSIX 打包与安装自测。
