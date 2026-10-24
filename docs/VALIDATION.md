@@ -69,3 +69,5 @@ UI 使用完整官方组件与状态同步。编译时针对 VS Code 的限制�
 | 更新后／回退后实际发送及草稿保留 | 通过 | artifacts/vscode-smoke.json |
 
 GitHub 自动监测和公开发布将在服务器端验证后记录。日常项目验收待用户完成。
+
+自动流水线 [40060291615](https://github.com/HunkYuan/opencode-vscode/actions/runs/40060291615) 已完成 npm 2.1.4 的发现、候选 PR #1、Windows/Linux 验证、自动合并和发布。公开 [ui-2.1.4-vscode.1](https://github.com/HunkYuan/opencode-vscode/releases/tag/ui-2.1.4-vscode.1) 包已通过真实客户端从更新清单下载安装，SHA256 a65fbb7e0afb54c37de2063960c906f74b095faa34a6bda0185f95b36e99f5fd。

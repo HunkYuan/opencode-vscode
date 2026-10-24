@@ -89,8 +89,13 @@ try {
   active = await new UiPackages({ directory: join(fixture.directory, "ui-cache"), builtinDirectory: originalDirectory, hostProtocol: HOST_PROTOCOL, indexURL: source.url.origin + "/stable.json", log: () => {} }).select(fixture.endpoint.version)
   distribution.use(active.directory)
   loaded = ""
+  const agents = page.waitForResponse((response) => {
+    const url = new URL(response.url())
+    return url.pathname.endsWith("/api/agent") && url.searchParams.get("location[directory]")?.toLowerCase() === fixture.project.toLowerCase() && response.status() === 200
+  })
   await page.reload({ waitUntil: "domcontentloaded" })
   await expect.poll(() => loaded).toBe(updated.id)
+  assert.ok((await (await agents).json() as { data: { id: string }[] }).data.some((agent) => agent.id === "build"))
   await expect(page.locator('[contenteditable="true"]')).toHaveText("UI 更新前的 GBK 草稿")
   await page.getByText("saved file.cpp", { exact: false }).first().waitFor()
   const response = page.waitForResponse(/\/api\/session\/[^/]+\/prompt(?:\?.*)?$/)

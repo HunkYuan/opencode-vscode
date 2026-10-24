@@ -8,7 +8,7 @@
 
 ## 安装
 
-要求：VS Code 1.94+、本机已安装 [OpenCode CLI](https://opencode.ai)。首次安装附带 OpenCode 2.1.2 UI，后续 UI 包按已验证的 service 兼容范围独立更新。
+要求：VS Code 1.94+、本机已安装 [OpenCode CLI](https://opencode.ai)。首次安装附带已验证的官方 UI，后续 UI 包按已验证的 service 兼容范围独立更新。
 
 1. 从 [GitHub Releases](https://github.com/HunkYuan/opencode-vscode/releases/latest) 下载对应版本的 `.vsix`。
 2. 在 VS Code 扩展菜单选择 **Install from VSIX…** 安装。

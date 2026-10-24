@@ -8,6 +8,11 @@ on:
         default: dev
         required: true
         type: string
+      publish:
+        description: Publish assets after verification; disable for validation only
+        default: true
+        required: true
+        type: boolean
 
 permissions:
   contents: write
@@ -34,6 +39,7 @@ jobs:
     with:
       source: ${{ needs.source.outputs.sha }}
   publish:
+    if: inputs.publish
     needs: [source, validate]
     runs-on: ubuntu-latest
     concurrency:
