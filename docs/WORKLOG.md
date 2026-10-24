@@ -108,3 +108,22 @@
 - 0.2.0 VSIX 从干净暂存目录组装，Host 57847de 与公开 UI 0cc5a37；隔离 profile 安装与全部上述编辑器联调通过。日常 profile 未安装。
 - [v0.2.0 Release](https://github.com/HunkYuan/opencode-vscode/releases/tag/v0.2.0) 已公开，VSIX 与 SHA256SUMS.txt 上传后再次从公开地址读取，33,600,292 bytes；SHA256 8e4e69306370fccb4aaa18ce6ee2d0c87643e7325a2536294940a11f2d418855 一致。
 - 现有共享 service 未停止、未重启、未更换版本；最终日常项目验收待用户安装自测。
+
+
+## COST-001 — GitHub Actions 零支出核对 — 2026-10-24
+
+- 用户要求避免 GitHub 付费；核对当前官方规则、个人 Free 计划、公开仓库与标准 runner 配置。
+- 标准 runner 的公开仓库执行时间免费；Actions artifact 与 Packages 共享 500 MB 额度，cache 另有每仓库 10 GB 额度。
+- 发现本仓库 28 份 artifact 共 1,137,744,414 bytes，90 天保留；核对时无运行中的 workflow。只读查询不代表已扣费。
+- 整改计划 docs/ACTIONS-COST.md：个人 Actions 产品 $0 硬预算、缩短临时产物保留、发布后清理、旧 artifact 删除需确认。
+- 当前尚未清理远端产物或修改 workflow、账号预算；新预算不覆盖创建前用量，不能宣称零费用保护已生效。
+
+## SOURCE-001 — 暂停自动发布并撤下托管产物 — 2026-10-24
+
+- 用户先授权清理旧产物，随后明确暂停原方案，改为 GitHub 只放源码、用户本地构建 UI 包。
+- 被中断的 COST-001 清理尚未执行：清理脚本未写入、无对应进程，复核远端 artifact 库存仍为 28 份。
+- 用户选择停用全部 Actions，且由助手清理 Release 附件；已停用仓库级 Actions 和四个 workflow。
+- 清理前无活动 run，所有 artifact 所属任务已结束；删除十二个 Release 附件、二十八份 artifact（1,137,744,414 bytes）、两项缓存（74,665,036 bytes）。
+- ui-updates/stable.json 清空；Release 附件数、artifact 和 cache 库存回读均为零。源码、标签、Release 文字与历史保留，本机产物和用户 service 未动。
+- 用户确认已设置个人 Actions $0 硬预算并启用停止；该确认不是 API 回读。历史已经累计的用量不会因清理而撤销。
+- 插件目前仍是已发布过的 0.2.0 运行逻辑，本轮未改实现；docs/SOURCE-ONLY.md 列出本地 ZIP 导入、取消线上更新、删除旧 workflow 与发布脚本的计划，等待开工。

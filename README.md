@@ -1,5 +1,7 @@
 # OpenCode Sidebar
 
+> 分发方式已调整：GitHub 不再提供 VSIX/UI ZIP 附件，全部 Actions 已停用。请按“从源码构建”在本机生成并安装 VSIX。下文 0.2.0 的在线更新说明属于历史功能，当前应将 opencodeSidebar.uiAutoUpdate 设为 false；本地 UI ZIP 导入改造计划见 [SOURCE-ONLY.md](docs/SOURCE-ONLY.md)。
+
 将官方 OpenCode Solid UI 显示在 VS Code 侧栏，连接本机共享服务。聊天、历史会话、模型选择、工具过程、权限和提问界面均复用 OpenCode 的组件与逻辑。
 
 这是 HunkYuan 维护的第三方扩展，使用 MIT 许可的官方 UI。
@@ -8,9 +10,9 @@
 
 ## 安装
 
-要求：VS Code 1.94+、本机已安装 [OpenCode CLI](https://opencode.ai)。首次安装附带已验证的官方 UI，后续 UI 包按已验证的 service 兼容范围独立更新。
+要求：VS Code 1.94+、本机已安装 [OpenCode CLI](https://opencode.ai)。本地构建的 VSIX 附带同次构建的官方 UI。
 
-1. 从 [GitHub Releases](https://github.com/HunkYuan/opencode-vscode/releases/latest) 下载对应版本的 `.vsix`。
+1. 按下方“从源码构建”在本机生成 `.vsix`。
 2. 在 VS Code 扩展菜单选择 **Install from VSIX…** 安装。
 3. 打开本地项目，执行 **OpenCode: Open Sidebar**，或按 `Ctrl+Alt+O`（macOS：`Cmd+Alt+O`）。
 4. 选中代码，右键 **OpenCode: Add Selection** 或按 `Ctrl+Alt+K`，确认附件后输入需求。
@@ -28,7 +30,7 @@
 | OpenCode: Reconnect | 重新发现并连接 service |
 | OpenCode: Enable Shared Service | 用户主动启用被禁用的 service |
 | OpenCode: Show Logs | 查看插件日志 |
-| OpenCode: Check UI Updates | 主动检查并下载兼容 UI 包 |
+| OpenCode: Check UI Updates | 0.2.0 历史在线更新入口，目前不使用 |
 | OpenCode: Apply UI Update | 保存草稿后应用已下载的 UI 包 |
 | OpenCode: Roll Back UI | 回退并固定上一份兼容 UI 包 |
 
@@ -45,22 +47,20 @@
 | `opencodeSidebar.cliPath` | 空 | 从 PATH、标准 npm 或 `.opencode/bin` 定位 CLI；Windows 推荐指定 `opencode.exe` |
 | `opencodeSidebar.autoStart` | true | 缺少 service 时自动启动，OpenCode 的 disabled 设置优先 |
 | `opencodeSidebar.followTheme` | true | 跟随 VS Code 深浅主题 |
-| `opencodeSidebar.uiAutoUpdate` | true | 自动下载兼容 UI；下次启动或重建侧栏时使用 |
+| `opencodeSidebar.uiAutoUpdate` | 0.2.0 默认为 true | 当前请设为 false，在线更新已退役 |
 
 - `opencode service get disabled` 为 true 时，展示原因和启用按钮。
 - UI 与 service 版本不同会提示并复用。接口不兼容时提示更新，不因 UI 版本替换 service。
 - 凭据保留在 Extension Host，回环转发支持 HTTP、SSE、WebSocket 和请求取消。
 - 会话历史保留在 service，侧栏 tab、草稿和附件保存在 VS Code 工作区存储。
 
-## 独立 UI 更新
+## UI 包与更新状态
 
-打开侧栏时自动检查 [UI 更新清单](https://raw.githubusercontent.com/HunkYuan/opencode-vscode/ui-updates/stable.json)，每 6 小时刷新。UI ZIP 包含官方界面、Client SDK 和宿主适配；按 service 兼容范围及宿主协议选包，下载校验后存入 VS Code 插件全局存储。当前聊天继续使用原包，正常启动或重载后自动切换。
+使用者在本机构建 VSIX 和 UI ZIP。VSIX 自带同次构建的官方 UI，安装后即可连接本机 service；构建过程按 upstream.json 获取固定版本的官方源码。
 
-无需每次重装 VSIX。Apply UI Update 可主动提前切换，先保存草稿；OpenCode 正在工作时不切换。Roll Back UI 会固定旧包，主动执行 Check UI Updates 可恢复自动选择。下载失败保留当前包，UI 启动失败回退。服务版本尚未验证时保留已有 UI 并记录原因，不更换运行中的 service。
+原 0.2.0 的 GitHub 在线更新流程已停用，更新清单为空。已安装 0.2.0 的用户请将 opencodeSidebar.uiAutoUpdate 设为 false。当前源码尚无本地 UI ZIP 导入命令；暂时可重新构建并安装完整 VSIX。
 
-仓库自动监测官方 GitHub 和 npm 正式版，发现更高版本后准备候选更新；固定源码在 Windows/Linux 通过构建、附件、草稿、更新回退、权限和表单测试后，自动合并、发布 UI 包并更新清单。失败候选停止发布，等待修复。OpenCode CLI 本身仍按原有方式升级。
-
-UI 使用 `ui-*` Release 标签并保持 VSIX 的 latest Release。完整协议、缓存和流水线见 [独立 UI 包设计](docs/UI-PACKAGES.md)。
+本地 ZIP 导入、应用与回退的具体改造计划见 [SOURCE-ONLY.md](docs/SOURCE-ONLY.md)，确认开工后实施。原独立包与宿主协议记录保存在 [UI-PACKAGES.md](docs/UI-PACKAGES.md)。
 
 ## 从源码构建
 
