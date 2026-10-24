@@ -1,10 +1,10 @@
 {
   "schemaVersion": 1,
-  "id": "opencode-2.1.2-vscode.1",
+  "id": "opencode-2.1.4-vscode.1",
   "revision": 1,
-  "upstreamVersion": "2.1.2",
-  "upstreamCommit": "c93aaae37157d785f76a8e9a9243a6560e286468",
+  "upstreamVersion": "2.1.4",
+  "upstreamCommit": "68bc26b7da1990ce10ffecfbc1e09eb13aa5d824",
   "hostProtocol": 1,
-  "serviceRange": "2.1.2",
+  "serviceRange": "2.1.4",
   "entry": "index.html"
 }
